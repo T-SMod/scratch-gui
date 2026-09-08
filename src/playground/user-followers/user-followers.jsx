@@ -1,8 +1,8 @@
 import PropTypes from 'prop-types';
 import React, {useState, useEffect} from 'react';
-import useHashUserId from '../user/use-hash-user-id.jsx';
+import useHashId from '../user/use-hash-id.jsx';
 import {connect} from 'react-redux';
-import {FormattedMessage, FormattedDate, FormattedRelative, defineMessages, injectIntl, intlShape} from 'react-intl';
+import {FormattedMessage, defineMessages, injectIntl, intlShape} from 'react-intl';
 import AppStateHOC from '../../lib/app-state-hoc.jsx';
 import render from '../app-target';
 import styles from './user-followers.css';
@@ -12,17 +12,14 @@ import {Footer} from '../render-interface.jsx';
 import Button from '../../components/button/button.jsx';
 import LazyMenuBar from '../../components/menu-bar/lazy-menu-bar.jsx';
 import {APP_NAME} from '../../lib/brand';
+import {requestDashApi} from '../../lib/dash-api.js';
 import {applyGuiColors} from '../../lib/themes/guiHelpers';
 import {detectTheme} from '../../lib/themes/themePersistance';
-import getSession from '../../lib/session.js';
 
 /* eslint-disable react/jsx-no-literals */
 
 const theme = detectTheme();
 applyGuiColors(theme);
-
-// Browser support is not perfect yet
-const relativeTimeSupported = () => typeof Intl !== 'undefined' && typeof Intl.RelativeTimeFormat !== 'undefined';
 
 const messages = defineMessages({
     title: {
@@ -32,11 +29,11 @@ const messages = defineMessages({
     }
 });
 
-const UserFollowers = (props) => {
-    const id = useHashUserId();
+const UserFollowers = props => {
+    const id = useHashId();
     const [userData, setUserData] = useState(null);
     const [followers, setFollowers] = useState([]);
-    const [limit, setLimit] = useState(40);
+    const [limit, _] = useState(40);
     const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [loadMoreButtonDisabled, setLoadMoreButtonDisabled] = useState(false);
@@ -44,15 +41,34 @@ const UserFollowers = (props) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const fetchFollowers = async currentOffset => {
+        setLoadMoreButtonDisabled(true);
+        try {
+            const followersRes = await requestDashApi(`/users/${id}/followers?limit=${limit}&offset=${currentOffset}`, {
+                credentials: 'include'
+            });
+            if (!followersRes.ok) throw new Error('Failed to fetch followers');
+            const followersData = await followersRes.json();
+            if (!followersData.ok) throw new Error(followersData.error);
+            setFollowers(prevFollowers => [...prevFollowers, ...followersData.followers]);
+            setHasMore(followersData.followers.length === limit);
+        } catch (catchedError) {
+            setError(catchedError.message);
+        } finally {
+            setLoading(false);
+            setLoadMoreButtonDisabled(false);
+        }
+    };
+
     useEffect(() => {
-        document.title = props.intl.formatMessage(messages.title, {
+        document.title = `${props.intl.formatMessage(messages.title, {
             username: 'User',
             followersCount: '?'
-        }) + ' - ' + APP_NAME;
+        })} - ${APP_NAME}`;
 
         setLoading(true);
         const fetchData = async () => {
-            const userReq = await fetch(`https://api.dashblocks.org/users/${id}`);
+            const userReq = await requestDashApi(`/users/${id}`);
             if (!userReq.ok) {
                 setError('Failed to fetch user data');
                 setLoading(false);
@@ -64,59 +80,49 @@ const UserFollowers = (props) => {
                 setLoading(false);
                 return;
             }
-            document.title = props.intl.formatMessage(messages.title, {
+            document.title = `${props.intl.formatMessage(messages.title, {
                 username: user.user.username,
                 followersCount: user.user.profile.stats.followers
-            }) + ' - ' + APP_NAME;
+            })} - ${APP_NAME}`;
             setUserData(user.user);
             await fetchFollowers(0);
             setLoading(false);
-        }
+        };
         fetchData();
     }, [id]);
 
-    const fetchFollowers = async (currentOffset) => {
-        setLoadMoreButtonDisabled(true);
-        try {
-            const followersRes = await fetch(`https://api.dashblocks.org/users/${id}/followers?limit=${limit}&offset=${currentOffset}`, {
-                credentials: 'include'
-            });
-            if (!followersRes.ok) throw new Error('Failed to fetch followers');
-            const followersData = await followersRes.json();
-            if (!followersData.ok) throw new Error(followersData.error);
-            setFollowers(prevFollowers => [...prevFollowers, ...followersData.followers]);
-            setHasMore(followersData.followers.length === limit);
-        } catch (error) {
-            setError(error.message);
-        } finally {
-            setLoading(false);
-            setLoadMoreButtonDisabled(false);
-        }
-    };
-
-    if (loading) return (
-        <>
-            <LazyMenuBar />
-            <div className={styles.spinner}>
-                <Spinner level={'primary'} large />
-            </div>
-            <Footer />
-        </>
-    );
-    if (error) return (
-        <>
-            <LazyMenuBar />
-            <div>Error: {error}</div>
-            <Footer />
-        </>
-    );
-    if (!userData || !followers) return (
-        <>
-            <LazyMenuBar />
-            <div>Failed to load user data</div>
-            <Footer />
-        </>
-    );
+    if (loading) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div className={styles.spinner}>
+                    <Spinner
+                        level={'primary'}
+                        large
+                    />
+                </div>
+                <Footer />
+            </>
+        );
+    }
+    if (error) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div>Error: {error}</div>
+                <Footer />
+            </>
+        );
+    }
+    if (!userData || !followers) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div>Failed to load user data</div>
+                <Footer />
+            </>
+        );
+    }
 
     return (
         <>
@@ -139,10 +145,11 @@ const UserFollowers = (props) => {
                             />
                         </h2>
                         <div className={styles.followList}>
-                            {followers.length > 0 ? followers.map((follower) => (
+                            {followers.length > 0 ? followers.map(follower => (
                                 <div
                                     key={follower.id}
                                     className={styles.followCard}
+                                    // eslint-disable-next-line react/jsx-no-bind
                                     onClick={() => window.open(`./user#${follower.id}`, '_blank')}
                                 >
                                     <img
@@ -164,6 +171,7 @@ const UserFollowers = (props) => {
                                 <Button
                                     className={styles.loadMoreButton}
                                     disabled={loadMoreButtonDisabled}
+                                    // eslint-disable-next-line react/jsx-no-bind
                                     onClick={() => {
                                         const newOffset = offset + limit;
                                         setOffset(newOffset);

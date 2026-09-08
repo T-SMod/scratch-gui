@@ -13,6 +13,7 @@ import LazyMenuBar from '../../components/menu-bar/lazy-menu-bar.jsx';
 import {Footer} from '../render-interface.jsx';
 
 import {APP_NAME} from '../../lib/brand';
+import {requestDashApi} from '../../lib/dash-api.js';
 import {applyGuiColors} from '../../lib/themes/guiHelpers';
 import {detectTheme} from '../../lib/themes/themePersistance';
 
@@ -33,6 +34,11 @@ const messages = defineMessages({
         id: 'dash.donate.invoiceError'
     }
 });
+
+const getExpirationDate = (days, locale) => (
+    new Date(Date.now() + (days * 24 * 60 * 60 * 1000))
+        .toLocaleDateString(locale)
+);
 
 const PLANS = [
     {
@@ -68,7 +74,7 @@ export class Donate extends React.Component {
             method: 'SBP',
             waiting: false,
             error: '',
-            expirationDate: new Date(Date.now() + PLANS[0].days * 24 * 60 * 60 * 1000).toLocaleDateString(this.props.intl.locale)
+            expirationDate: getExpirationDate(PLANS[0].days, this.props.intl.locale)
         };
     }
 
@@ -77,7 +83,11 @@ export class Donate extends React.Component {
     }
 
     handlePlanChange (plan) {
-        this.setState({selectedPlan: plan, error: '', expirationDate: new Date(Date.now() + plan.days * 24 * 60 * 60 * 1000).toLocaleDateString(this.props.intl.locale)});
+        this.setState({
+            selectedPlan: plan,
+            error: '',
+            expirationDate: getExpirationDate(plan.days, this.props.intl.locale)
+        });
     }
 
     handleCurrencyChange (event) {
@@ -86,18 +96,30 @@ export class Donate extends React.Component {
             currency,
             method: currency === 'RUB' ? 'SBP' : '',
             error: '',
-            expirationDate: new Date(Date.now() + PLANS[0].days * 24 * 60 * 60 * 1000).toLocaleDateString(this.props.intl.locale)
+            expirationDate: getExpirationDate(
+                this.state.selectedPlan.days,
+                this.props.intl.locale
+            )
         });
     }
 
     handleMethodChange (event) {
-        this.setState({method: event.target.value, error: '', expirationDate: new Date(Date.now() + this.state.selectedPlan.days * 24 * 60 * 60 * 1000).toLocaleDateString(this.props.intl.locale)});
+        this.setState({
+            method: event.target.value,
+            error: '',
+            expirationDate: getExpirationDate(
+                this.state.selectedPlan.days,
+                this.props.intl.locale
+            )
+        });
     }
 
     async handleSubmit (event) {
         event.preventDefault();
-        if (!this.props.session || !this.props.session?.username)
+        if (!this.props.session || !this.props.session.username) {
             window.location.href = 'login';
+            return;
+        }
         this.setState({waiting: true, error: ''});
 
         try {
@@ -109,7 +131,7 @@ export class Donate extends React.Component {
                 body.method = this.state.method;
             }
 
-            const response = await fetch('https://api.dashblocks.org/payments/create', {
+            const response = await requestDashApi('/payments/create', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 credentials: 'include',
@@ -154,6 +176,7 @@ export class Donate extends React.Component {
                             </p>
                             <p>
                                 <FormattedMessage
+                                    // eslint-disable-next-line max-len
                                     defaultMessage="After donating, the following benefits will be available for you in community:"
                                     description="Description of the benefits of donating"
                                     id="dash.donate.benefits"
@@ -191,6 +214,7 @@ export class Donate extends React.Component {
                             </ul>
                             <p>
                                 <FormattedMessage
+                                    // eslint-disable-next-line max-len
                                     defaultMessage="Choose a plan and currency, then click 'Donate Now' to proceed with payment on Lava.top platform."
                                     description="Instructions for donating"
                                     id="dash.donate.instructions"
@@ -198,6 +222,7 @@ export class Donate extends React.Component {
                             </p>
                             <p>
                                 <FormattedMessage
+                                    // eslint-disable-next-line max-len
                                     defaultMessage="Your additional privileges will be active in your account approximately until: {expirationDate}"
                                     description="Information about when the donation privileges will expire"
                                     id="dash.donate.expiration"
@@ -215,7 +240,7 @@ export class Donate extends React.Component {
                                     id="dash.donate.refundContact"
                                     values={{
                                         contactUs: (
-                                            <a href="contact-us">contact us</a>
+                                            <a href="mailto:contact@dashblocks.org">contact us</a>
                                         )
                                     }}
                                 />
@@ -230,6 +255,7 @@ export class Donate extends React.Component {
                                                 className={classNames(styles.planCard, {
                                                     [styles.selected]: this.state.selectedPlan.offerId === plan.offerId
                                                 })}
+                                                // eslint-disable-next-line react/jsx-no-bind
                                                 onClick={() => this.handlePlanChange(plan)}
                                             >
                                                 <span className={styles.planTitle}>
@@ -244,7 +270,10 @@ export class Donate extends React.Component {
                                         ))}
                                     </div>
                                     <div className={styles.formRow}>
-                                        <label className={styles.label} htmlFor="currency">
+                                        <label
+                                            className={styles.label}
+                                            htmlFor="currency"
+                                        >
                                             <FormattedMessage
                                                 defaultMessage="Currency"
                                                 description="Label for currency selection"
@@ -264,7 +293,10 @@ export class Donate extends React.Component {
                                     </div>
                                     {this.state.currency === 'RUB' && (
                                         <div className={styles.formRow}>
-                                            <label className={styles.label} htmlFor="method">
+                                            <label
+                                                className={styles.label}
+                                                htmlFor="method"
+                                            >
                                                 <FormattedMessage
                                                     defaultMessage="Payment Method"
                                                     description="Label for payment method selection"

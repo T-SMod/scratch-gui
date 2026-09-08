@@ -20,7 +20,7 @@ import {
 import {generateRandomUsername} from './tw-username';
 import {setSearchParams} from './tw-navigation-utils';
 import {defaultStageSize} from '../reducers/custom-stage-size';
-import getSession from './session';
+import getSession from './dash-api';
 
 /* eslint-disable no-alert */
 
@@ -308,7 +308,11 @@ const TWStateManager = function (WrappedComponent) {
                 this.doNotPersistUsername = username;
                 this.props.onSetUsername(username);
             } else {
-                const persistentUsername = this.props.isEmbedded ? null : (session?.username ? session.username : getLocalStorage(USERNAME_KEY));
+                const persistentUsername =
+                    this.props.isEmbedded ?
+                        null : (
+                            session?.username ? session.username : getLocalStorage(USERNAME_KEY)
+                        );
                 if (persistentUsername === null) {
                     const randomUsername = generateRandomUsername();
                     this.props.onSetUsername(randomUsername);
@@ -388,14 +392,6 @@ const TWStateManager = function (WrappedComponent) {
                 this.props.isPlayerOnly !== prevProps.isPlayerOnly ||
                 this.props.isFullScreen !== prevProps.isFullScreen
             ) {
-                const routerCallbacks = {
-                    onSetProjectId: this.onSetProjectId,
-                    onSetIsPlayerOnly: this.onSetIsPlayerOnly,
-                    onSetIsFullScreen: this.onSetIsFullScreen
-                };
-                if (!this.router) {
-                    this.router = createRouter(this.props.routingStyle, routerCallbacks);
-                }
                 const oldPath = `${location.pathname}${location.search}${location.hash}`;
                 const routerState = {
                     projectId: this.props.reduxProjectId,
@@ -432,7 +428,7 @@ const TWStateManager = function (WrappedComponent) {
                     searchParams.set('size', `${width}x${height}`);
                 }
 
-                if (this.props.cloudHost == 'wss://clouddata.turbowarp.org') {
+                if (this.props.cloudHost === 'wss://clouddata.turbowarp.org') {
                     searchParams.delete('cloud_host');
                 } else {
                     searchParams.set('cloud_host', this.props.cloudHost);

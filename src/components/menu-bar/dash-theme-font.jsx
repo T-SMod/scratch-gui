@@ -1,12 +1,10 @@
 import classNames from 'classnames';
-import {injectIntl} from 'react-intl';
+import {FormattedMessage, injectIntl} from 'react-intl';
 import PropTypes from 'prop-types';
 import bindAll from 'lodash.bindall';
 import React from 'react';
-import {FormattedMessage} from 'react-intl';
 import {connect} from 'react-redux';
 import check from './check.svg';
-import cross from './cross.svg';
 import dropdownCaret from './dropdown-caret.svg';
 import {MenuItem, Submenu} from '../menu/menu.jsx';
 import {Theme} from '../../lib/themes/index.js';
@@ -36,16 +34,17 @@ class FontThemeMenu extends React.Component {
         if (files && files.length > 0) {
             const file = files[0];
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = e => {
                 const dataUrl = e.target.result;
                 this.props.onChangeTheme(
                     this.props.theme.set('font', {font: dataUrl})
                 );
                 const fontFace = new FontFace('customFont', `url(${dataUrl})`);
-                fontFace.load().then((loadedFont) => {
+                fontFace.load().then(loadedFont => {
                     document.fonts.add(loadedFont);
                     document.body.style.fontFamily = 'customFont, "Helvetica Neue", Helvetica, sans-serif';
-                }).catch(console.error)
+                })
+                    .catch(console.error);
             };
             reader.readAsDataURL(file);
         }
@@ -54,9 +53,9 @@ class FontThemeMenu extends React.Component {
     handleOpenFilePicker () {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = ".ttf, .otf";
+        input.accept = '.ttf, .otf';
         input.multiple = false;
-        input.addEventListener('change', (e) => {
+        input.addEventListener('change', e => {
             if (e.target.files && e.target.files.length) {
                 this.handleFileChange(e.target.files);
             } else {
@@ -80,22 +79,24 @@ class FontThemeMenu extends React.Component {
         const fontFace = new FontFace('customFont', `url(${this.props.theme.font.font})`);
         this.setState({isForEverything: newValue});
         if (newValue && this.props.theme.font.font) {
-            fontFace.load().then((loadedFont) => {
+            fontFace.load().then(loadedFont => {
                 document.fonts.add(loadedFont);
                 const style = document.createElement('style');
                 style.innerHTML = `* {font-family: 'customFont', "Helvetica Neue", Helvetica, sans-serif !important;}`;
                 document.head.appendChild(style);
-            }).catch(console.error)
+            })
+                .catch(console.error);
         } else {
-            document.head.querySelectorAll('style').forEach((style) => {
+            document.head.querySelectorAll('style').forEach(style => {
                 if (style.innerHTML.includes("font-family: 'customFont'")) {
                     style.remove();
                 }
             });
-            fontFace.load().then((loadedFont) => {
+            fontFace.load().then(loadedFont => {
                 document.fonts.add(loadedFont);
                 document.body.style.fontFamily = 'customFont, "Helvetica Neue", Helvetica, sans-serif';
-            }).catch(console.error)
+            })
+                .catch(console.error);
         }
     }
 
@@ -153,8 +154,8 @@ class FontThemeMenu extends React.Component {
                             <img
                                 width={15}
                                 height={12}
-                                className={classNames(styles.check, {[styles.selected]: /*true*/ this.state.isForEverything})}
-                                src={/*this.state.isForEverything ?*/ check /*: cross*/}
+                                className={classNames(styles.check, {[styles.selected]: this.state.isForEverything})}
+                                src={check}
                                 draggable={false}
                             />
                             <FormattedMessage
@@ -164,8 +165,9 @@ class FontThemeMenu extends React.Component {
                             />
                         </MenuItem>
                         <MenuItem
-                            className={classNames({[styles.disabled]: this.props.theme.font.font == null})}
-                            onClick={this.props.theme.font.font == null ? () => {} : this.handleResetFont}
+                            className={classNames({[styles.disabled]: this.props.theme.font.font === null})}
+                            // eslint-disable-next-line react/jsx-no-bind
+                            onClick={this.props.theme.font.font === null ? () => {} : this.handleResetFont}
                         >
                             <FormattedMessage
                                 defaultMessage="Reset font"
@@ -185,7 +187,6 @@ FontThemeMenu.propTypes = {
     isRtl: PropTypes.bool,
     onChangeTheme: PropTypes.func,
     onOpenMenu: PropTypes.func,
-    onRequestClose: PropTypes.func,
     theme: PropTypes.instanceOf(Theme)
 };
 

@@ -1,13 +1,13 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import classNames from 'classnames';
 
 import Box from '../box/box.jsx';
-import {getStageDimensions, getMinWidth} from '../../lib/screen-utils.js';
 import styles from './pseudo-console.css';
 
+/* eslint-disable no-control-regex */
 const escCodeMatch = /\x1B\[[0-9;]+m/g; // Partly support for "Graphic Mode" ESC codes
 const escCodeValid = /\x1B\[\d+(;\d+)*m/;
+/* eslint-enable no-control-regex */
 const colors = {
     30: 'rgb(0, 0, 0)', // Black
     31: 'rgb(196, 0, 0)', // Red
@@ -33,16 +33,24 @@ const styleByEscCode = (escCode, style) => {
     case '0': return {};
     case '1': return {...style, fontWeight: 'bold'};
     case '3': return {...style, fontStyle: 'italic'};
-    case '4': return {...style, textDecoration: (style.textDecoration ? style.textDecoration.split(' ') : []).toSpliced(0, 0, 'underline').join(' ')};
+    case '4': return {...style,
+        textDecoration: (style.textDecoration ? style.textDecoration.split(' ') : [])
+            .toSpliced(0, 0, 'underline').join(' ')};
     case '8': return {...style, opacity: 0};
-    case '9': return {...style, textDecoration: (style.textDecoration ? style.textDecoration.split(' ') : []).toSpliced(0, 0, 'line-through').join(' ')};
+    case '9': return {...style,
+        textDecoration: (style.textDecoration ? style.textDecoration.split(' ') : [])
+            .toSpliced(0, 0, 'line-through').join(' ')};
 
     // Reseting styles
     case '22': return {...style, fontWeight: null};
     case '23': return {...style, fontStyle: null};
-    case '24': return {...style, textDecoration: (style.textDecoration ? style.textDecoration.split(' ') : []).filter((v) => v !== 'underline').join('')};
+    case '24': return {...style,
+        textDecoration: (style.textDecoration ? style.textDecoration.split(' ') : [])
+            .filter(v => v !== 'underline').join('')};
     case '28': return {...style, opacity: null};
-    case '29': return {...style, textDecoration: (style.textDecoration ? style.textDecoration.split(' ') : []).filter((v) => v !== 'line-through').join('')};
+    case '29': return {...style,
+        textDecoration: (style.textDecoration ? style.textDecoration.split(' ') : [])
+            .filter(v => v !== 'line-through').join('')};
 
     // Non-table colors
     case '38':
@@ -50,38 +58,38 @@ const styleByEscCode = (escCode, style) => {
         const styleName = params[0] === '38' ? 'color' : 'backgroundColor';
         if (params[1] === '2') {
             if (
-                0 <= +params[2] && +params[2] <= 255 &&
-                0 <= +params[3] && +params[3] <= 255 &&
-                0 <= +params[4] && +params[4] <= 255
+                +params[2] >= 0 && +params[2] <= 255 &&
+                +params[3] >= 0 && +params[3] <= 255 &&
+                +params[4] >= 0 && +params[4] <= 255
             ) return {...style, [styleName]: `rgb(${params[2]}, ${params[3]}, ${params[4]})`};
         }
         if (params[1] === '5') {
-            if (0 <= +params[2] && +params[2] <= 7) return {...style, [styleName]: colors[+params[2] + 30]};
-            if (8 <= +params[2] && +params[2] <= 15) return {...style, [styleName]: colors[+params[2] + 82]};
-            if (16 <= +params[2] && +params[2] <= 231) {
-                let id = +params[2] - 16, r, g, b;
-                r = Math.min(5, Math.floor(id / 36));
-                g = Math.min(5, Math.floor((id - r * 36) / 6));
-                b = id % 6;
+            if (+params[2] >= 0 && +params[2] <= 7) return {...style, [styleName]: colors[+params[2] + 30]};
+            if (+params[2] >= 8 && +params[2] <= 15) return {...style, [styleName]: colors[+params[2] + 82]};
+            if (+params[2] >= 16 && +params[2] <= 231) {
+                const id = +params[2] - 16;
+                const r = Math.min(5, Math.floor(id / 36));
+                const g = Math.min(5, Math.floor((id - (r * 36)) / 6));
+                const b = id % 6;
                 return {...style, [styleName]: `rgb(${r * 255 / 5}, ${g * 255 / 5}, ${b * 255 / 5})`};
             }
-            if (232 <= +params[2] && +params[2] <= 255) {
+            if (+params[2] >= 232 && +params[2] <= 255) {
                 const grayscale = (+params[2] - 232) * 255 / 24;
                 return {...style, [styleName]: `rgb(${grayscale}, ${grayscale}, ${grayscale})`};
             }
         }
     }
-
+    // intentional fallthrough to process default colors
     default: {
         if (
             // Foreground colors
-            (30 <= +params[0] && +params[0] <= 37) ||
-            (90 <= +params[0] && +params[0] <= 97)
+            (+params[0] >= 30 && +params[0] <= 37) ||
+            (+params[0] >= 90 && +params[0] <= 97)
         ) return {...style, color: colors[params[0]]};
         if (
             // Background colors
-            (40 <= +params[0] && +params[0] <= 47) ||
-            (100 <= +params[0] && +params[0] <= 107)
+            (+params[0] >= 40 && +params[0] <= 47) ||
+            (+params[0] >= 100 && +params[0] <= 107)
         ) return {...style, backgroundColor: colors[+params[0] - 10]};
         return style;
     }
@@ -89,7 +97,7 @@ const styleByEscCode = (escCode, style) => {
 };
 
 const PseudoConsoleComponent = props => (
-    <Box 
+    <Box
         className={styles.pseudoConsoleWrapper}
         style={{
             height: props.stageSize.height,
@@ -108,7 +116,10 @@ const PseudoConsoleComponent = props => (
                         if (i2 > 0 && escCodeValid.test(escCodes[i2 - 1])) {
                             style = styleByEscCode(escCodes[i2 - 1], style);
                         }
-                        return (<span key={i2} style={style}>{value}</span>);
+                        return (<span
+                            key={i2}
+                            style={style}
+                        >{value}</span>);
                     })}
                 </span>
             );
@@ -122,7 +133,6 @@ PseudoConsoleComponent.propTypes = {
         symbol: PropTypes.number
     }).isRequired,
     lines: PropTypes.arrayOf(PropTypes.string),
-    linesCount: PropTypes.number,
     shownLinesCount: PropTypes.number,
     stageSize: PropTypes.shape({
         width: PropTypes.number,

@@ -6,16 +6,6 @@ export default defineMessages({
         description: 'Tag for filtering a library for Dash-created content',
         id: 'dash.libraryTags.dash'
     },
-    tsmod: {
-        defaultMessage: 'TSMod',
-        description: 'Tag for filtering a library for TSMod-created content',
-        id: 'dash.libraryTags.tsmod'
-    },
-    gallery: {
-        defaultMessage: 'Galleries',
-        description: 'Tag for filtering a library for galleries',
-        id: 'dash.libraryTags.gallery'
-    },
     other: {
         defaultMessage: 'Other mods',
         description: 'Tag for filtering a library for extensions from other modifications',
@@ -140,15 +130,5 @@ export default defineMessages({
         defaultMessage: 'Letters',
         description: 'Tag for filtering a library for letters',
         id: 'gui.libraryTags.letters'
-    },
-    musicSound: {
-        defaultMessage: 'Music',
-        description: 'Tag for filtering a library for music in sound',
-        id: 'tsmod.gallerySound.music.name'
-    },
-    gallerysInExtGallery: {
-        defaultMessage: 'Gallerys',
-        description: 'Tag for filtering a library for gallerys in extensions galler',
-        id: 'tsmod.gallery.gallerys.name'
     }
 });

@@ -5,7 +5,19 @@ import {FormattedMessage} from 'react-intl';
 import styles from './monitor.css';
 import ListMonitorScroller from './list-monitor-scroller.jsx';
 
-const ListMonitor = ({draggable, label, width, height, value, path, onNavigateTo, onNavigateDown, onResizeMouseDown, onAdd, ...rowProps}) => (
+const ListMonitor = ({
+    draggable,
+    label,
+    width,
+    height,
+    value,
+    path,
+    onNavigateTo,
+    onNavigateDown,
+    onResizeMouseDown,
+    onAdd,
+    ...rowProps
+}) => (
     <div
         className={styles.listMonitor}
         style={{
@@ -18,11 +30,20 @@ const ListMonitor = ({draggable, label, width, height, value, path, onNavigateTo
         </div>
         {(path?.length || 0) > 0 && (
             <div className={styles.listPath}>
-                <span style={{cursor: 'pointer'}} onClick={() => onNavigateTo(0)}>{label}</span>
+                <span
+                    style={{cursor: 'pointer'}}
+                    // eslint-disable-next-line react/jsx-no-bind
+                    onClick={() => onNavigateTo(0)}
+                >{label}</span>
                 {path.map((p, i) => (
                     <span key={i}>
+                        {/* eslint-disable-next-line react/jsx-no-literals */}
                         <span>/</span>
-                        <span style={{cursor: 'pointer'}} onClick={() => onNavigateTo(i + 1)}>{typeof p === 'number' ? p + 1 /* one indexed */ : p}</span>
+                        <span
+                            style={{cursor: 'pointer'}}
+                            // eslint-disable-next-line react/jsx-no-bind
+                            onClick={() => onNavigateTo(i + 1)}
+                        >{typeof p === 'number' ? p + 1 /* one indexed */ : p}</span>
                     </span>
                 ))}
             </div>
@@ -80,15 +101,7 @@ ListMonitor.propTypes = {
     path: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
     onNavigateTo: PropTypes.func,
     onNavigateDown: PropTypes.func,
-    value: PropTypes.oneOfType([
-        PropTypes.string,
-        PropTypes.number,
-        PropTypes.arrayOf(PropTypes.oneOfType([
-            PropTypes.string,
-            PropTypes.number,
-            PropTypes.object
-        ]))
-    ]),
+    value: PropTypes.any,
     width: PropTypes.number
 };
 

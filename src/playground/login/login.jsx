@@ -3,8 +3,9 @@ import PropTypes from 'prop-types';
 import bindAll from 'lodash.bindall';
 import {connect} from 'react-redux';
 import {FormattedMessage, defineMessages, injectIntl, intlShape} from 'react-intl';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 import AppStateHOC from '../../lib/app-state-hoc.jsx';
-import getSession from '../../lib/session.js';
+import getSession from '../../lib/dash-api.js';
 import render from '../app-target';
 
 import LazyMenuBar from '../../components/menu-bar/lazy-menu-bar.jsx';
@@ -47,14 +48,20 @@ class Login extends React.Component {
             userId: '',
             password: '',
             verificationCode: '',
+            captchaToken: '',
             requiresVerification: false,
-            waiting: false,
+            waiting: true,
             error: null
         };
+        this.captchaRef = React.createRef();
     }
 
     componentDidMount () {
-        document.title = this.props.intl.formatMessage(messages.title) + ' - ' + APP_NAME;
+        document.title = `${this.props.intl.formatMessage(messages.title)} - ${APP_NAME}`;
+
+        if (this.props.session && this.props.session.username) {
+            window.location.href = '/';
+        }
     }
 
     handleChange (e) {
@@ -65,18 +72,24 @@ class Login extends React.Component {
         e.preventDefault();
 
         this.setState({waiting: true, error: null});
-        const {userId, password, verificationCode, requiresVerification} = this.state;
+        const {userId, password, verificationCode, captchaToken} = this.state;
         try {
-            const session = await getSession(userId, password, verificationCode);
+            const session = await getSession(userId, password, verificationCode, captchaToken);
             if (session && session.requiresVerification) {
                 this.setState({requiresVerification: true});
                 return;
             }
-            if (!session || !session.username)
-                throw new Error(session && session.error ? session.error : this.props.intl.formatMessage(messages.failedToLogIn));
+            if (!session || !session.username) {
+                throw new Error(
+                    session && session.error ?
+                        session.error :
+                        this.props.intl.formatMessage(messages.failedToLogIn)
+                );
+            }
             window.location.href = '/';
         } catch (error) {
             this.setState({error: error.message});
+            this.captchaRef.current.resetCaptcha();
         } finally {
             this.setState({waiting: false});
         }
@@ -86,7 +99,6 @@ class Login extends React.Component {
         return (
             <>
                 <LazyMenuBar />
-                {this.props.session && this.props.session.username ? window.location.href = "/" : null}
                 <div
                     className={styles.container}
                     dir={this.props.isRtl ? 'rtl' : 'ltr'}
@@ -114,6 +126,7 @@ class Login extends React.Component {
                                     </label>
                                     <p>
                                         <FormattedMessage
+                                            // eslint-disable-next-line max-len
                                             defaultMessage="Please enter the verification code sent to your account's email"
                                             description="Instructions for entering verification code"
                                             id="dash.login.verificationCode.instructions"
@@ -161,6 +174,13 @@ class Login extends React.Component {
                                         value={this.state.password}
                                         onChange={this.handleChange}
                                     />
+
+                                    <HCaptcha
+                                        ref={this.captchaRef}
+                                        sitekey="71b6ee4a-c34c-4340-9a52-9e5a648e1348"
+                                        // eslint-disable-next-line react/jsx-no-bind
+                                        onVerify={token => this.setState({waiting: false, captchaToken: token})}
+                                    />
                                 </form>
                             )}
 
@@ -196,7 +216,10 @@ class Login extends React.Component {
                                     id="dash.login.register"
                                     values={{
                                         signUp: (
-                                            <a href="./register" target="_blank">
+                                            <a
+                                                href="./register"
+                                                target="_blank"
+                                            >
                                                 <FormattedMessage
                                                     defaultMessage="Sign up"
                                                     description="Link to sign up page"

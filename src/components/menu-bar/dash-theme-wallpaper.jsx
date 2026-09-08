@@ -1,9 +1,8 @@
 import classNames from 'classnames';
-import {injectIntl} from 'react-intl';
+import {FormattedMessage, defineMessages, injectIntl, intlShape} from 'react-intl';
 import PropTypes from 'prop-types';
 import bindAll from 'lodash.bindall';
 import React from 'react';
-import {FormattedMessage, defineMessages} from 'react-intl';
 import {connect} from 'react-redux';
 import dropdownCaret from './dropdown-caret.svg';
 import {MenuItem, Submenu} from '../menu/menu.jsx';
@@ -12,7 +11,7 @@ import {openWallpaperThemeMenu, wallpaperThemeMenuOpen, closeSettingsMenu} from 
 import {setTheme} from '../../reducers/theme.js';
 import {persistTheme} from '../../lib/themes/themePersistance.js';
 import Prompt from '../../containers/prompt.jsx';
-import wallpaperIcon from './dash-wallpaper.svg'
+import wallpaperIcon from './dash-wallpaper.svg';
 import styles from './settings-menu.css';
 
 const messages = defineMessages({
@@ -50,12 +49,12 @@ class WallpaperThemeMenu extends React.Component {
         if (files && files.length > 0) {
             const file = files[0];
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = e => {
                 const dataUrl = e.target.result;
                 this.props.onChangeTheme(
                     this.props.theme.set('wallpaper', {
                         url: dataUrl,
-                        opaque: this.props.theme.wallpaper.url == null ? 0.6 : this.props.theme.wallpaper.opaque
+                        opaque: this.props.theme.wallpaper.url === null ? 0.6 : this.props.theme.wallpaper.opaque
                     })
                 );
             };
@@ -66,9 +65,9 @@ class WallpaperThemeMenu extends React.Component {
     handleOpenFilePicker () {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = ".img, .png, .jpg, .jpeg, .gif, .svg, .webp, .bmp, .ico, .tif, .tiff, .jfif, .pjpeg, .pjp, .avif, .cur, .apng";
+        input.accept = '.jpeg, .png, .webp, .gif, .svg, .avif, .heif';
         input.multiple = false;
-        input.addEventListener('change', (e) => {
+        input.addEventListener('change', e => {
             if (e.target.files && e.target.files.length) {
                 this.handleFileChange(e.target.files);
             } else {
@@ -89,7 +88,7 @@ class WallpaperThemeMenu extends React.Component {
         if (!value || (!num && num !== 0)) {
             this.setState({prompt: false});
             return;
-        };
+        }
         const opaque = Math.max(0, Math.min(1, num / 100));
         this.props.onChangeTheme(
             this.props.theme.set('wallpaper', {url: this.props.theme.wallpaper.url, opaque})
@@ -172,14 +171,16 @@ class WallpaperThemeMenu extends React.Component {
                             )}
                         </MenuItem>
                         <MenuItem
-                            className={classNames({[styles.disabled]: this.props.theme.wallpaper.url == null})}
-                            onClick={this.props.theme.wallpaper.url == null ? () => {} : this.handleChangeOpaque}
+                            className={classNames({[styles.disabled]: this.props.theme.wallpaper.url === null})}
+                            // eslint-disable-next-line react/jsx-no-bind
+                            onClick={this.props.theme.wallpaper.url === null ? () => {} : this.handleChangeOpaque}
                         >
                             {this.props.intl.formatMessage(messages.changeOpaque)}
                         </MenuItem>
                         <MenuItem
-                            className={classNames({[styles.disabled]: this.props.theme.wallpaper.url == null})}
-                            onClick={this.props.theme.wallpaper.url == null ? () => {} : this.handleRemoveWallpaper}
+                            className={classNames({[styles.disabled]: this.props.theme.wallpaper.url === null})}
+                            // eslint-disable-next-line react/jsx-no-bind
+                            onClick={this.props.theme.wallpaper.url === null ? () => {} : this.handleRemoveWallpaper}
                         >
                             <FormattedMessage
                                 defaultMessage="Remove wallpaper"
@@ -195,11 +196,11 @@ class WallpaperThemeMenu extends React.Component {
 }
 
 WallpaperThemeMenu.propTypes = {
+    intl: intlShape,
     isOpen: PropTypes.bool,
     isRtl: PropTypes.bool,
     onChangeTheme: PropTypes.func,
     onOpenMenu: PropTypes.func,
-    onRequestClose: PropTypes.func,
     theme: PropTypes.instanceOf(Theme)
 };
 

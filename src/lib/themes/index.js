@@ -7,7 +7,6 @@ import * as accentOrange from './accent/orange';
 import * as accentGreen from './accent/green';
 import * as accentRainbow from './accent/rainbow';
 import * as accentCustom from './accent/custom';
-import * as accentTSMod from './accent/tsmod'
 
 import * as guiLight from './gui/light';
 import * as guiDark from './gui/dark';
@@ -23,7 +22,6 @@ const ACCENT_ORANGE = 'orange';
 const ACCENT_GREEN = 'green';
 const ACCENT_RAINBOW = 'rainbow';
 const ACCENT_CUSTOM = 'custom';
-const ACCENT_TSMod = 'TSMod'
 const ACCENT_MAP = {
     [ACCENT_PURPLE]: accentPurple,
     [ACCENT_BLUE]: accentBlue,
@@ -31,10 +29,9 @@ const ACCENT_MAP = {
     [ACCENT_ORANGE]: accentOrange,
     [ACCENT_GREEN]: accentGreen,
     [ACCENT_RAINBOW]: accentRainbow,
-    [ACCENT_CUSTOM]: accentCustom,
-    [ACCENT_TSMod]: accentTSMod
+    [ACCENT_CUSTOM]: accentCustom
 };
-const ACCENT_DEFAULT = ACCENT_TSMod;
+const ACCENT_DEFAULT = ACCENT_ORANGE;
 
 const GUI_LIGHT = 'light';
 const GUI_DARK = 'dark';
@@ -98,7 +95,7 @@ class Theme {
         /** @readonly */
         this.wallpaper = wallpaper || {url: null, opaque: 0.6};
         /** @readonly */
-        this.font = font || {font: null}
+        this.font = font || {font: null};
     }
 
     static light = new Theme(ACCENT_DEFAULT, GUI_LIGHT, BLOCKS_DEFAULT, null, null);
@@ -142,9 +139,10 @@ class Theme {
         );
         if (this.wallpaper.url !== null) {
             blockColors = defaultsDeep(
-                {workspace: blockColors.workspace + Math.round(this.wallpaper.opaque * 255).toString(16).padStart(2, 0)},
+                {workspace: blockColors.workspace + Math.round(this.wallpaper.opaque * 255).toString(16)
+                    .padStart(2, 0)},
                 blockColors
-            )
+            );
         }
         return blockColors;
     }
@@ -180,7 +178,6 @@ export {
     ACCENT_BLUE,
     ACCENT_RAINBOW,
     ACCENT_CUSTOM,
-    ACCENT_TSMod,
     ACCENT_MAP,
 
     GUI_LIGHT,

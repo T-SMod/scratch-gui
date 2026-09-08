@@ -15,7 +15,7 @@ import LazyMenuBar from '../../components/menu-bar/lazy-menu-bar.jsx';
 import {APP_NAME} from '../../lib/brand';
 import {applyGuiColors} from '../../lib/themes/guiHelpers';
 import {detectTheme} from '../../lib/themes/themePersistance';
-import getSession from '../../lib/session.js';
+import getSession, {requestDashApi} from '../../lib/dash-api';
 
 /* eslint-disable react/jsx-no-literals */
 
@@ -72,7 +72,7 @@ const messages = defineMessages({
     }
 });
 
-const Admin = (props) => {
+const Admin = props => {
     const [userData, setUserData] = useState(null);
 
     const [featureProjectId, setFeatureProjectId] = useState('');
@@ -93,7 +93,7 @@ const Admin = (props) => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        document.title = props.intl.formatMessage(messages.title) + ' - ' + APP_NAME;
+        document.title = `${props.intl.formatMessage(messages.title)} - ${APP_NAME}`;
 
         const fetchFullProfile = async () => {
             setLoading(true);
@@ -110,123 +110,136 @@ const Admin = (props) => {
         fetchFullProfile();
     }, []);
 
-    async function handleFeatureProject(projectId) {
+    const handleFeatureProject = async projectId => {
         if (!projectId || featureProjectButtonLoading) return;
 
         setFeatureProjectButtonLoading(true);
 
         try {
-            const res = await fetch(`https://api.dashblocks.org/featured-projects/${Number(projectId)}`, {
+            const res = await requestDashApi(`/featured-projects/${Number(projectId)}`, {
                 method: 'POST',
                 credentials: 'include'
             });
             const data = await res.json();
             if (!data.ok) throw new Error(data.error);
             setFeatureProjectId('');
-        } catch (error) {
-            alert(`Error featuring project with ID ${projectId}: ${error.message}`);
+        } catch (catchedError) {
+            // eslint-disable-next-line no-alert
+            alert(`Error featuring project with ID ${projectId}: ${catchedError.message}`);
         } finally {
             setFeatureProjectButtonLoading(false);
         }
-    }
+    };
 
-    async function handleUnfeatureProject(projectId) {
+    const handleUnfeatureProject = async projectId => {
         if (!projectId || unfeatureProjectButtonLoading) return;
 
         setUnfeatureProjectButtonLoading(true);
 
         try {
-            const res = await fetch(`https://api.dashblocks.org/featured-projects/${Number(projectId)}`, {
+            const res = await requestDashApi(`/featured-projects/${Number(projectId)}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
             const data = await res.json();
             if (!data.ok) throw new Error(data.error);
             setUnfeatureProjectId('');
-        } catch (error) {
-            alert(`Error unfeaturing project with ID ${projectId}: ${error.message}`);
+        } catch (catchedError) {
+            // eslint-disable-next-line no-alert
+            alert(`Error unfeaturing project with ID ${projectId}: ${catchedError.message}`);
         } finally {
             setUnfeatureProjectButtonLoading(false);
         }
-    }
+    };
 
-    async function handleDeleteProject(projectId) {
+    const handleDeleteProject = async projectId => {
         if (!projectId || deleteProjectButtonLoading) return;
 
         setDeleteProjectButtonLoading(true);
 
         try {
-            const res = await fetch(`https://api.dashblocks.org/projects/${Number(projectId)}`, {
+            const res = await requestDashApi(`/projects/${Number(projectId)}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
             const data = await res.json();
             if (!data.ok) throw new Error(data.error);
-            if (res.status_code === 202)
-                alert(props.intl.formatMessage(messages.deletedOnlyFromProfile));
             setDeleteProjectId('');
-        } catch (error) {
-            alert(`Error deleting project with ID ${projectId}: ${error.message}`);
+        } catch (catchedError) {
+            // eslint-disable-next-line no-alert
+            alert(`Error deleting project with ID ${projectId}: ${catchedError.message}`);
         } finally {
             setDeleteProjectButtonLoading(false);
         }
-    }
+    };
 
-    async function handleManageUser() {
+    const handleManageUser = async () => {
         if (!targetUsername || manageButtonLoading) return;
 
         setManageButtonLoading(true);
 
         try {
-            const body = { targetUsername, action: manageAction };
+            const body = {targetUsername, action: manageAction};
             if (manageAction === 'promote') body.role = manageRole;
 
-            const res = await fetch('https://api.dashblocks.org/admin/manage-user', {
+            const res = await requestDashApi('/admin/manage-user', {
                 method: 'POST',
                 credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(body)
             });
             const data = await res.json();
             if (!data.ok) throw new Error(data.error);
             // Not clearing states to allow multiple actions on the same user
-        } catch (error) {
-            alert(`Error managing user ${targetUsername}: ${error.message}`);
+        } catch (catchedError) {
+            // eslint-disable-next-line no-alert
+            alert(`Error managing user ${targetUsername}: ${catchedError.message}`);
         } finally {
             setManageButtonLoading(false);
         }
-    }
+    };
 
-    if (loading) return (
-        <>
-            <LazyMenuBar />
-            <div className={styles.spinner}>
-                <Spinner level={'primary'} large />
-            </div>
-            <Footer />
-        </>
-    );
-    if (error) return (
-        <>
-            <LazyMenuBar />
-            <div>Error: {error}</div>
-            <Footer />
-        </>
-    );
-    if (!userData) return (
-        <>
-            <LazyMenuBar />
-            <div>Failed to load user data</div>
-            <Footer />
-        </>
-    );
-    if (userData.role !== 'dashteam') return (
-        <>
-            <LazyMenuBar />
-            <div>Not an admin</div>
-            <Footer />
-        </>
-    )
+    if (loading) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div className={styles.spinner}>
+                    <Spinner
+                        level={'primary'}
+                        large
+                    />
+                </div>
+                <Footer />
+            </>
+        );
+    }
+    if (error) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div>Error: {error}</div>
+                <Footer />
+            </>
+        );
+    }
+    if (!userData) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div>Failed to load user data</div>
+                <Footer />
+            </>
+        );
+    }
+    if (userData.role !== 'dashteam') {
+        return (
+            <>
+                <LazyMenuBar />
+                <div>Not an admin</div>
+                <Footer />
+            </>
+        );
+    }
 
     return (
         <>
@@ -270,10 +283,14 @@ const Admin = (props) => {
                             </div>
                             <Button
                                 className={styles.button}
+                                // eslint-disable-next-line react/jsx-no-bind
                                 onClick={() => handleFeatureProject(featureProjectId)}
                             >
                                 {featureProjectButtonLoading ? (
-                                    <Spinner className={styles.spinner} small />
+                                    <Spinner
+                                        className={styles.spinner}
+                                        small
+                                    />
                                 ) : (
                                     <FormattedMessage
                                         defaultMessage="Feature"
@@ -309,10 +326,14 @@ const Admin = (props) => {
                             </div>
                             <Button
                                 className={styles.button}
+                                // eslint-disable-next-line react/jsx-no-bind
                                 onClick={() => handleUnfeatureProject(unfeatureProjectId)}
                             >
                                 {unfeatureProjectButtonLoading ? (
-                                    <Spinner className={styles.spinner} small />
+                                    <Spinner
+                                        className={styles.spinner}
+                                        small
+                                    />
                                 ) : (
                                     <FormattedMessage
                                         defaultMessage="Unfeature"
@@ -348,10 +369,14 @@ const Admin = (props) => {
                             </div>
                             <Button
                                 className={styles.button}
+                                // eslint-disable-next-line react/jsx-no-bind
                                 onClick={() => handleDeleteProject(deleteProjectId)}
                             >
                                 {deleteProjectButtonLoading ? (
-                                    <Spinner className={styles.spinner} small />
+                                    <Spinner
+                                        className={styles.spinner}
+                                        small
+                                    />
                                 ) : (
                                     <FormattedMessage
                                         defaultMessage="Delete"
@@ -391,6 +416,7 @@ const Admin = (props) => {
                                 />
                                 <select
                                     value={manageAction}
+                                    // eslint-disable-next-line react/jsx-no-bind
                                     onChange={e => setManageAction(e.target.value)}
                                     className={styles.input}
                                 >
@@ -420,6 +446,7 @@ const Admin = (props) => {
                                     />
                                     <select
                                         value={manageRole}
+                                        // eslint-disable-next-line react/jsx-no-bind
                                         onChange={e => setManageRole(e.target.value)}
                                         className={styles.input}
                                     >
@@ -434,10 +461,14 @@ const Admin = (props) => {
                             )}
                             <Button
                                 className={styles.button}
+                                // eslint-disable-next-line react/jsx-no-bind
                                 onClick={handleManageUser}
                             >
                                 {manageButtonLoading ? (
-                                    <Spinner className={styles.spinner} small />
+                                    <Spinner
+                                        className={styles.spinner}
+                                        small
+                                    />
                                 ) : (
                                     <FormattedMessage
                                         defaultMessage="Manage"

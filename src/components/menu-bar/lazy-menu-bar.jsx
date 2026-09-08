@@ -6,8 +6,6 @@ import PropTypes from 'prop-types';
 import bindAll from 'lodash.bindall';
 import React from 'react';
 
-import VM from 'scratch-vm';
-
 import Box from '../box/box.jsx';
 import Button from '../button/button.jsx';
 import {ComingSoonTooltip} from '../coming-soon/coming-soon.jsx';
@@ -22,6 +20,7 @@ import TWNews from './tw-news.jsx';
 import {isNewYearMode} from '../../components/dash-new-year-mode/new-year-mode.jsx';
 
 import {setSession} from '../../reducers/dash';
+import {requestDashApi} from '../../lib/dash-api.js';
 import {
     openAccountMenu,
     closeAccountMenu,
@@ -36,7 +35,7 @@ import styles from './menu-bar.css';
 import messagesIcon from './icon--messages.png';
 import mystuffIcon from './icon--mystuff.png';
 import dashLogo from './dash.png';
-import dashNewYearLogo from './dash-new-year.png'
+import dashNewYearLogo from './dash-new-year.png';
 import searchIcon from './icon--search.png';
 
 import isScratchDesktop from '../../lib/isScratchDesktop.js';
@@ -130,13 +129,15 @@ class LazyMenuBar extends React.Component {
     }
     async handleClickLogOut () {
         try {
-            const response = await fetch('https://api.dashblocks.org/auth/logout', {credentials: 'include'});
+            const response = await requestDashApi('/auth/logout', {credentials: 'include'});
             const data = await response.json();
+            // eslint-disable-next-line no-alert
             if (!data.ok) return alert('Sign out failed');
             this.props.setSession({});
             window.location.reload();
         } catch (error) {
             console.warn(error?.message || error);
+            // eslint-disable-next-line no-alert
             alert('Sign out failed');
         }
     }
@@ -218,7 +219,8 @@ class LazyMenuBar extends React.Component {
                     {!isScratchDesktop() && (
                         <div
                             className={classNames(styles.menuBarItem, styles.hoverable, styles.editorButton)}
-                            onClick={() => window.open("./editor", "_blank")}
+                            // eslint-disable-next-line react/jsx-no-bind
+                            onClick={() => window.open('./editor', '_blank')}
                         >
                             {/* todo: icon */}
                             <FormattedMessage
@@ -228,7 +230,10 @@ class LazyMenuBar extends React.Component {
                             />
                         </div>
                     )}
-                    <form className={styles.menuBarSearch} onSubmit={this.handleSearchSubmit}>
+                    <form
+                        className={styles.menuBarSearch}
+                        onSubmit={this.handleSearchSubmit}
+                    >
                         <input
                             type="search"
                             className={styles.menuBarSearchInput}
@@ -263,7 +268,9 @@ class LazyMenuBar extends React.Component {
                                 >
                                     <span
                                         className={
-                                            this.props.session?.profile.unreadMessages > 0 ? styles.messagesCountVisible : styles.messagesCount
+                                            this.props.session?.profile.unreadMessages > 0 ?
+                                                styles.messagesCountVisible :
+                                                styles.messagesCount
                                         }
                                     >{this.props.session?.profile.unreadMessages}</span>
                                     <img
@@ -309,7 +316,8 @@ class LazyMenuBar extends React.Component {
                                     styles.hoverable
                                 )}
                                 key="join"
-                                onMouseUp={() => window.open("./register", '_blank')}
+                                // eslint-disable-next-line react/jsx-no-bind
+                                onMouseUp={() => window.open('./register', '_blank')}
                             >
                                 <FormattedMessage
                                     defaultMessage="Join Dash"
@@ -323,7 +331,8 @@ class LazyMenuBar extends React.Component {
                                     styles.hoverable
                                 )}
                                 key="login"
-                                onMouseUp={() => window.open("./login", '_blank')}
+                                // eslint-disable-next-line react/jsx-no-bind
+                                onMouseUp={() => window.open('./login', '_blank')}
                             >
                                 <FormattedMessage
                                     defaultMessage="Sign in"
@@ -342,9 +351,15 @@ class LazyMenuBar extends React.Component {
                 <React.Fragment>
                     {menuBar}
                     {/* !process.env.OLD_COMPILER && (<TWNews item='dash:news1' id='new-compiler' />) */}
-                    {window.location.href.startsWith('https://dashblocks.org/scratch-gui') && (<TWNews item='dash:news2' id='dev-version' />)}
+                    {window.location.href.startsWith('https://dashblocks.org/scratch-gui') && (<TWNews
+                        item="dash:news2"
+                        id="dev-version"
+                    />)}
                     {/* <TWNews item='dash:news3' id='new-year' /> */}
-                    {<TWNews item='dash:news4' id='donate' />}
+                    {<TWNews
+                        item="dash:news4"
+                        id="donate"
+                    />}
                 </React.Fragment>
             </div>
         );
@@ -356,21 +371,18 @@ LazyMenuBar.propTypes = {
     canChangeLanguage: PropTypes.bool,
     canChangeTheme: PropTypes.bool,
     className: PropTypes.string,
-    currentLocale: PropTypes.string.isRequired,
     intl: intlShape,
     isRtl: PropTypes.bool,
-    locale: PropTypes.string.isRequired,
     onClickAccount: PropTypes.func,
     onClickAddonSettings: PropTypes.func,
     onClickSettings: PropTypes.func,
-    onClickSettingsModal: PropTypes.func,
-    onLogOut: PropTypes.func,
+    onClickDesktopSettings: PropTypes.func,
     onRequestCloseAccount: PropTypes.func,
     onRequestCloseSettings: PropTypes.func,
+    session: PropTypes.object,
     sessionExists: PropTypes.bool,
     settingsMenuOpen: PropTypes.bool,
-    setSession: PropTypes.func,
-    vm: PropTypes.instanceOf(VM).isRequired
+    setSession: PropTypes.func
 };
 
 LazyMenuBar.defaultProps = {

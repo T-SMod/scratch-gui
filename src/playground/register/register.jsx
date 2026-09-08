@@ -3,8 +3,8 @@ import PropTypes from 'prop-types';
 import bindAll from 'lodash.bindall';
 import {connect} from 'react-redux';
 import {FormattedMessage, defineMessages, injectIntl, intlShape} from 'react-intl';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 import AppStateHOC from '../../lib/app-state-hoc.jsx';
-import getSession from '../../lib/session.js';
 import render from '../app-target';
 
 import LazyMenuBar from '../../components/menu-bar/lazy-menu-bar.jsx';
@@ -17,6 +17,7 @@ import {Footer} from '../render-interface.jsx';
 import styles from './register.css';
 
 import {APP_NAME} from '../../lib/brand';
+import {requestDashApi} from '../../lib/dash-api.js';
 import {applyGuiColors} from '../../lib/themes/guiHelpers';
 import {detectTheme} from '../../lib/themes/themePersistance';
 
@@ -54,14 +55,20 @@ class Register extends React.Component {
             password: '',
             confirmPassword: '',
             verificationCode: '',
+            captchaToken: '',
             requiresVerification: false,
-            waiting: false,
+            waiting: true,
             error: null
         };
+        this.captchaRef = React.createRef();
     }
 
     componentDidMount () {
-        document.title = this.props.intl.formatMessage(messages.title) + ' - ' + APP_NAME;
+        document.title = `${this.props.intl.formatMessage(messages.title)} - ${APP_NAME}`;
+
+        if (this.props.session && this.props.session.username) {
+            window.location.href = '/';
+        }
     }
 
     handleChange (e) {
@@ -72,19 +79,21 @@ class Register extends React.Component {
         e.preventDefault();
 
         this.setState({waiting: true, error: null});
-        const {email, username, password, confirmPassword, verificationCode} = this.state;
+        const {email, username, password, confirmPassword, verificationCode, captchaToken} = this.state;
         try {
             // Maybe better to do this on backend ¯\_(ツ)_/¯
-            if (password !== confirmPassword)
+            if (password !== confirmPassword) {
                 throw new Error(this.props.intl.formatMessage(messages.passwordsDontMatch));
-            const response = await fetch('https://api.dashblocks.org/auth/register', {
+            }
+            const response = await requestDashApi('/auth/register', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     email,
                     username,
                     password,
-                    ...(verificationCode ? {verificationCode} : {})
+                    ...(verificationCode ? {verificationCode} : {}),
+                    ...(captchaToken ? {captchaToken} : {})
                 }),
                 credentials: 'include'
             });
@@ -93,11 +102,13 @@ class Register extends React.Component {
                 return;
             }
             const result = await response.json();
-            if (!result.ok)
+            if (!result.ok) {
                 throw new Error(result.error || this.props.intl.formatMessage(messages.failedToSignUp));
+            }
             window.location.href = '/login';
         } catch (error) {
             this.setState({error: error.message});
+            this.captchaRef.current.resetCaptcha();
         } finally {
             this.setState({waiting: false});
         }
@@ -107,9 +118,9 @@ class Register extends React.Component {
         return (
             <>
                 <LazyMenuBar />
-                {this.props.session && this.props.session.username ? window.location.href = "/" : null}
                 <div
                     className={styles.container}
+                    dir={this.props.isRtl ? 'rtl' : 'ltr'}
                 >
                     <div className={styles.registerWrapper}>
                         <div className={styles.section}>
@@ -219,14 +230,27 @@ class Register extends React.Component {
                                         onChange={this.handleChange}
                                     />
 
+                                    <HCaptcha
+                                        ref={this.captchaRef}
+                                        sitekey="71b6ee4a-c34c-4340-9a52-9e5a648e1348"
+                                        // eslint-disable-next-line react/jsx-no-bind
+                                        onVerify={token => this.setState({waiting: false, captchaToken: token})}
+                                    />
+
                                     <p>
                                         <FormattedMessage
+                                            // eslint-disable-next-line max-len
                                             defaultMessage="By using Dash, you agree to our {termsOfService} and {privacyPolicy}."
+                                            // eslint-disable-next-line max-len
                                             description="Text to inform users about terms of service and privacy policy when registering"
                                             id="dash.tosAndPrivacy"
                                             values={{
                                                 termsOfService: (
-                                                    <a href={`${process.env.ROOT}tos`} target="_blank">
+                                                    <a
+                                                        href={`${process.env.ROOT}tos`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
                                                         <FormattedMessage
                                                             defaultMessage="Terms of Service"
                                                             description="Link to terms of service page"
@@ -235,7 +259,11 @@ class Register extends React.Component {
                                                     </a>
                                                 ),
                                                 privacyPolicy: (
-                                                    <a href={`${process.env.ROOT}privacy`} target="_blank">
+                                                    <a
+                                                        href={`${process.env.ROOT}privacy`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
                                                         <FormattedMessage
                                                             defaultMessage="Privacy Policy"
                                                             description="Link to privacy policy page"
@@ -278,10 +306,13 @@ class Register extends React.Component {
                                 <FormattedMessage
                                     defaultMessage="Already have an account? {logIn}"
                                     description="Text prompting user to log in if they already have an account"
-									id="dash.register.logIn"
+                                    id="dash.register.logIn"
                                     values={{
                                         logIn: (
-                                            <a href="./login" target="_blank">
+                                            <a
+                                                href="./login"
+                                                target="_blank"
+                                            >
                                                 <FormattedMessage
                                                     defaultMessage="Log in"
                                                     description="Link to log in page"

@@ -1,16 +1,13 @@
-import {FormattedMessage, intlShape, defineMessages} from 'react-intl';
+import {intlShape, defineMessages} from 'react-intl';
 import PropTypes from 'prop-types';
 import React from 'react';
 
-import Box from '../box/box.jsx';
 import SpriteCostumeLibraryItem from './sprite-costume-library-item.jsx';
 import SoundLibraryItem from './sound-library-item.jsx';
 import ExtensionLibraryItem from './extension-library-item.jsx';
 import styles from './library-item.css';
 import classNames from 'classnames';
 
-import bluetoothIconURL from './bluetooth.svg';
-import internetConnectionIconURL from './internet-connection.svg';
 import favoriteInactiveIcon from './favorite-inactive.svg';
 import favoriteActiveIcon from './favorite-active.svg';
 
@@ -48,22 +45,22 @@ class LibraryItemComponent extends React.PureComponent {
             </button>
         );
 
-        return this.props.libraryId === "backdropLibrary" ? (
+        return this.props.libraryId === 'backdropLibrary' ? (
             <SpriteCostumeLibraryItem
                 favoriteButton={favorite}
                 {...this.props}
             />
-        ) : this.props.libraryId === "spriteLibrary" || this.props.libraryId === "costumeLibrary" ? (
+        ) : this.props.libraryId === 'spriteLibrary' || this.props.libraryId === 'costumeLibrary' ? (
             <SpriteCostumeLibraryItem
                 favoriteButton={favorite}
                 {...this.props}
             />
-        ) : this.props.libraryId === "soundLibrary" ? (
+        ) : this.props.libraryId === 'soundLibrary' ? (
             <SoundLibraryItem
                 favoriteButton={favorite}
                 {...this.props}
             />
-        ) : this.props.libraryId === "extensionLibrary" ? (
+        ) : this.props.libraryId === 'extensionLibrary' ? (
             <ExtensionLibraryItem
                 favoriteButton={favorite}
                 {...this.props}

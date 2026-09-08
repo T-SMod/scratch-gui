@@ -14,8 +14,8 @@ import LazyMenuBar from '../../components/menu-bar/lazy-menu-bar.jsx';
 import {APP_NAME} from '../../lib/brand';
 import {applyGuiColors} from '../../lib/themes/guiHelpers';
 import {detectTheme} from '../../lib/themes/themePersistance';
-import getSession from '../../lib/session.js';
-import {setSession} from '../../reducers/dash.js';
+import getSession, {requestDashApi} from '../../lib/dash-api';
+import {setSession} from '../../reducers/dash';
 
 import firedIcon from './icon--fired.svg';
 import featuredIcon from './icon--featured.svg';
@@ -59,11 +59,11 @@ const messages = defineMessages({
     }
 });
 
-const Messages = (props) => {
+const Messages = props => {
     const [userData, setUserData] = useState(null);
     const [userMessages, setUserMessages] = useState([]);
     const [markAllAsReadButtonDisabled, setMarkAllAsReadButtonDisabled] = useState(false);
-    const [limit, setLimit] = useState(40);
+    const [limit, _] = useState(40);
     const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [loadMoreButtonDisabled, setLoadMoreButtonDisabled] = useState(false);
@@ -71,8 +71,27 @@ const Messages = (props) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const fetchMessages = async currentOffset => {
+        setLoadMoreButtonDisabled(true);
+        try {
+            const messagesRes = await requestDashApi(`/session/messages?limit=${limit}&offset=${currentOffset}`, {
+                credentials: 'include'
+            });
+            if (!messagesRes.ok) throw new Error('Failed to fetch messages');
+            const messagesData = await messagesRes.json();
+            if (!messagesData.ok) throw new Error(messagesData.error);
+            setUserMessages(prevUserMessages => [...prevUserMessages, ...messagesData.messages]);
+            setHasMore(messagesData.messages.length === limit);
+        } catch (catchedError) {
+            setError(catchedError.message);
+        } finally {
+            setLoading(false);
+            setLoadMoreButtonDisabled(false);
+        }
+    };
+
     useEffect(() => {
-        document.title = props.intl.formatMessage(messages.title) + ' - ' + APP_NAME;
+        document.title = `${props.intl.formatMessage(messages.title)} - ${APP_NAME}`;
 
         setLoading(true);
         const fetchData = async () => {
@@ -85,171 +104,185 @@ const Messages = (props) => {
             setUserData(session);
             await fetchMessages(0);
             setLoading(false);
-        }
+        };
         fetchData();
     }, []);
 
-    const fetchMessages = async (currentOffset) => {
-        setLoadMoreButtonDisabled(true);
-        try {
-            const messagesRes = await fetch(`https://api.dashblocks.org/session/messages?limit=${limit}&offset=${currentOffset}`, {
-                credentials: 'include'
-            });
-            if (!messagesRes.ok) throw new Error('Failed to fetch messages');
-            const messagesData = await messagesRes.json();
-            if (!messagesData.ok) throw new Error(messagesData.error);
-            setUserMessages(prevUserMessages => [...prevUserMessages, ...messagesData.messages]);
-            setHasMore(messagesData.messages.length === limit);
-        } catch (error) {
-            setError(error.message);
-        } finally {
-            setLoading(false);
-            setLoadMoreButtonDisabled(false);
-        }
-    };
-
-    const getMessageContent = (message) => {
+    const getMessageContent = message => {
         switch (message.type) {
-            case 'joined':
-                return (
-                    <>
-                        {/* TODO: Icon */}
-                        <FormattedMessage
-                            defaultMessage="Welcome to Dash! Get started by {creatingProject} and {exploringOthers}"
-                            description="Displayed when user joins to Dash"
-                            id="dash.messages.joined"
-                            values={{
-                                creatingProject: <a href="editor">{props.intl.formatMessage(messages.creatingProject)}</a>,
-                                exploringOthers: <a href="trending">{props.intl.formatMessage(messages.exploringOthers)}</a>
-                            }}
-                        />
-                    </>
-                );
-            case 'fired':
-                return (
-                    <>
-                        <img
-                            className={styles.messageIcon}
-                            src={firedIcon}
-                            draggable={false}
-                        />
-                        <FormattedMessage
-                            defaultMessage="{user} fired your project {project}"
-                            description="Displayed when someone fired user's project"
-                            id="dash.messages.fired"
-                            values={{
-                                user: <a href={`user#${message.user.username}`}>{message.user.username}</a>,
-                                project: <a href={`/#${message.id}`}>{message.name}</a>
-                            }}
-                        />
-                    </>
-                );
-            case 'featured':
-                return (
-                    <>
-                        <img
-                            className={styles.messageIcon}
-                            src={featuredIcon}
-                            draggable={false}
-                        />
-                        <FormattedMessage
-                            defaultMessage="Your project {project} got featured!"
-                            description="Displayed when user's project is featured"
-                            id="dash.messages.featured"
-                            values={{
-                                project: <a href={`/#${message.id}`}>{message.name}</a>
-                            }}
-                        />
-                    </>
-                );
-            case 'promoted': {
-                if (message.role === 'dash-supporter') {
-                    return (
-                        <>
-                            <img
-                                className={styles.messageIcon}
-                                src={promotedIcon /* TODO: Maybe other icon? */}
-                                draggable={false}
-                            />
-                            <FormattedMessage
-                                defaultMessage="Thank you for your support, you are now Dash Supporter! Now you have exclusive benefits, read {donationPage} to learn more about this role"
-                                description="Displayed when user got demoted to Dasher role"
-                                id="dash.messages.promotedDashSupporter"
-                                values={{
-                                    donationPage: <a href="donate">{props.intl.formatMessage(messages.donationPage)}</a>
-                                }}
-                            />
-                        </>
-                    );
-                } else if (message.role === 'dasher+') {
-                    return (
-                        <>
-                            <img
-                                className={styles.messageIcon}
-                                src={promotedIcon}
-                                draggable={false}
-                            />
-                            <FormattedMessage
-                                defaultMessage="Congrats! You are now Dasher+, now you can {setDescription} in your profile and upload projects with custom extensions"
-                                description="Displayed when user got promoted to Dasher+ role"
-                                id="dash.messages.promotedDasherPlus"
-                                values={{
-                                    setDescription: <a href={`user#${userData.username}`}>{props.intl.formatMessage(messages.setDescription)}</a>
-                                }}
-                            />
-                        </>
-                    );
-                } else if (message.role === 'dasher') {
-                    return (
-                        <>
-                            <img
-                                className={styles.messageIcon}
-                                src={demotedIcon}
-                                draggable={false}
-                            />
-                            <FormattedMessage
-                                defaultMessage="You got demoted to Dasher role"
-                                description="Displayed when user got demoted to Dasher role"
-                                id="dash.messages.demotedDasher"
-                            />
-                        </>
-                    );
-                }
-            }
-            case 'new-follower': {
-                return (
-                    <>
-                        <img
-                            className={styles.messageIcon}
-                            src={newFollowerIcon}
-                            draggable={false}
-                        />
-                        <FormattedMessage
-                            defaultMessage="{user} is now following you"
-                            description="Displayed when someone starts following the user"
-                            id="dash.messages.newFollower"
-                            values={{
-                                user: <a href={`user#${message.user.username}`}>{message.user.username}</a>
-                            }}
-                        />
-                    </>
-                );
-            }
-            default:
-                return (
+        case 'joined':
+            return (
+                <>
+                    {/* TODO: Icon */}
                     <FormattedMessage
-                        defaultMessage="Unknown message type"
-                        description="Displayed when a message has an unknown type"
-                        id="dash.messages.unknownMessageType"
+                        defaultMessage="Welcome to Dash! Get started by {creatingProject} and {exploringOthers}"
+                        description="Displayed when user joins to Dash"
+                        id="dash.messages.joined"
+                        values={{
+                            creatingProject: <a href="editor">{props.intl.formatMessage(messages.creatingProject)}</a>,
+                            exploringOthers: <a href="trending">{props.intl.formatMessage(messages.exploringOthers)}</a>
+                        }}
                     />
+                </>
+            );
+        case 'fired':
+            return (
+                <>
+                    <img
+                        className={styles.messageIcon}
+                        src={firedIcon}
+                        draggable={false}
+                    />
+                    <FormattedMessage
+                        defaultMessage="{user} fired your project {project}"
+                        description="Displayed when someone fired user's project"
+                        id="dash.messages.fired"
+                        values={{
+                            user: <a href={`user#${message.user.username}`}>{message.user.username}</a>,
+                            project: <a href={`/#${message.id}`}>{message.name}</a>
+                        }}
+                    />
+                </>
+            );
+        case 'project-forked':
+            return (
+                <>
+                    {/* TODO: Icon */}
+                    <FormattedMessage
+                        defaultMessage="{user} forked your project {project}, {checkItOut}!"
+                        description="Displayed when someone forked user's project"
+                        id="dash.messages.projectForked"
+                        values={{
+                            user: <a href={`user#${message.user.username}`}>{message.user.username}</a>,
+                            project: <a href={`/#${message.project.id}`}>{message.project.name}</a>,
+                            checkItOut: (
+                                <>
+                                    <a href={`/#${message.fork.id}`}>
+                                        <FormattedMessage
+                                            defaultMessage="check it out"
+                                            description="Link to project's fork"
+                                            id="dash.messages.projectForked.checkItOut"
+                                        />
+                                    </a>
+                                </>
+                            )
+                        }}
+                    />
+                </>
+            );
+        case 'featured':
+            return (
+                <>
+                    <img
+                        className={styles.messageIcon}
+                        src={featuredIcon}
+                        draggable={false}
+                    />
+                    <FormattedMessage
+                        defaultMessage="Your project {project} got featured!"
+                        description="Displayed when user's project is featured"
+                        id="dash.messages.featured"
+                        values={{
+                            project: <a href={`/#${message.id}`}>{message.name}</a>
+                        }}
+                    />
+                </>
+            );
+        case 'promoted': {
+            if (message.role === 'dash-supporter') {
+                return (
+                    <>
+                        <img
+                            className={styles.messageIcon}
+                            src={promotedIcon /* TODO: Maybe other icon? */}
+                            draggable={false}
+                        />
+                        <FormattedMessage
+                            // eslint-disable-next-line max-len
+                            defaultMessage="Thank you for your support, you are now Dash Supporter! Now you have exclusive benefits, read {donationPage} to learn more about this role"
+                            description="Displayed when user got demoted to Dasher role"
+                            id="dash.messages.promotedDashSupporter"
+                            values={{
+                                donationPage: <a href="donate">{props.intl.formatMessage(messages.donationPage)}</a>
+                            }}
+                        />
+                    </>
                 );
+            } else if (message.role === 'dasher+') {
+                return (
+                    <>
+                        <img
+                            className={styles.messageIcon}
+                            src={promotedIcon}
+                            draggable={false}
+                        />
+                        <FormattedMessage
+                            // eslint-disable-next-line max-len
+                            defaultMessage="Congrats! You are now Dasher+, now you can {setDescription} in your profile and upload projects with custom extensions"
+                            description="Displayed when user got promoted to Dasher+ role"
+                            id="dash.messages.promotedDasherPlus"
+                            values={{
+                                setDescription: (
+                                    <a href={`user#${userData.username}`}>
+                                        {props.intl.formatMessage(messages.setDescription)}
+                                    </a>
+                                )
+                            }}
+                        />
+                    </>
+                );
+            } else if (message.role === 'dasher') {
+                return (
+                    <>
+                        <img
+                            className={styles.messageIcon}
+                            src={demotedIcon}
+                            draggable={false}
+                        />
+                        <FormattedMessage
+                            defaultMessage="You got demoted to Dasher role"
+                            description="Displayed when user got demoted to Dasher role"
+                            id="dash.messages.demotedDasher"
+                        />
+                    </>
+                );
+            }
+            break;
+        }
+        case 'new-follower': {
+            return (
+                <>
+                    <img
+                        className={styles.messageIcon}
+                        src={newFollowerIcon}
+                        draggable={false}
+                    />
+                    <FormattedMessage
+                        defaultMessage="{user} is now following you"
+                        description="Displayed when someone starts following the user"
+                        id="dash.messages.newFollower"
+                        values={{
+                            user: <a href={`user#${message.user.username}`}>{message.user.username}</a>
+                        }}
+                    />
+                </>
+            );
+        }
+        default:
+            return (
+                <FormattedMessage
+                    defaultMessage="Unknown message type"
+                    description="Displayed when a message has an unknown type"
+                    id="dash.messages.unknownMessageType"
+                />
+            );
         }
     };
 
-    async function handleClickMarkAllAsReadButton() {
+    const handleClickMarkAllAsReadButton = async () => {
         setMarkAllAsReadButtonDisabled(true);
         try {
-            const res = await fetch('https://api.dashblocks.org/session/messages/mark-all-as-read', {
+            const res = await requestDashApi('/session/messages/mark-all-as-read', {
                 method: 'POST',
                 credentials: 'include'
             });
@@ -265,36 +298,45 @@ const Messages = (props) => {
             }));
             const session = await getSession();
             setSession(session);
-        } catch (error) {
-            setError(error.message);
+        } catch (catchedError) {
+            setError(catchedError.message);
         } finally {
             setMarkAllAsReadButtonDisabled(false);
         }
-    }
+    };
 
-    if (loading) return (
-        <>
-            <LazyMenuBar />
-            <div className={styles.spinner}>
-                <Spinner level={'primary'} large />
-            </div>
-            <Footer />
-        </>
-    );
-    if (error) return (
-        <>
-            <LazyMenuBar />
-            <div>Error: {error}</div>
-            <Footer />
-        </>
-    );
-    if (!userData || !userMessages) return (
-        <>
-            <LazyMenuBar />
-            <div>Failed to load user data</div>
-            <Footer />
-        </>
-    );
+    if (loading) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div className={styles.spinner}>
+                    <Spinner
+                        level={'primary'}
+                        large
+                    />
+                </div>
+                <Footer />
+            </>
+        );
+    }
+    if (error) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div>Error: {error}</div>
+                <Footer />
+            </>
+        );
+    }
+    if (!userData || !userMessages) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div>Failed to load user data</div>
+                <Footer />
+            </>
+        );
+    }
 
     return (
         <>
@@ -316,6 +358,7 @@ const Messages = (props) => {
                             <Button
                                 className={styles.markAllAsReadButton}
                                 disabled={markAllAsReadButtonDisabled}
+                                // eslint-disable-next-line react/jsx-no-bind
                                 onClick={handleClickMarkAllAsReadButton}
                             >
                                 {markAllAsReadButtonDisabled ? (
@@ -348,15 +391,20 @@ const Messages = (props) => {
                                             description="Displayed date for the message"
                                             id="dash.messages.date"
                                             values={{
-                                                date: (message.date ? new Date(message.date) : null)
-                                                    ? relativeTimeSupported()
-                                                        ? (
-                                                            <span title={`${props.intl.formatDate(new Date(message.date))}, ${props.intl.formatTime(new Date(message.date))}`}>
+                                                date: (message.date ? new Date(message.date) : null) ?
+                                                    relativeTimeSupported() ?
+                                                        (
+                                                            <span
+                                                                title={
+                                                                    // eslint-disable-next-line max-len
+                                                                    `${props.intl.formatDate(new Date(message.date))}, ${props.intl.formatTime(new Date(message.date))}`
+                                                                }
+                                                            >
                                                                 <FormattedRelative value={message.date} />
                                                             </span>
-                                                        )
-                                                        : (<FormattedDate value={new Date(message.date)} />)
-                                                    : '?'
+                                                        ) :
+                                                        (<FormattedDate value={new Date(message.date)} />) :
+                                                    '?'
                                             }}
                                         />
                                     </div>
@@ -366,6 +414,7 @@ const Messages = (props) => {
                                 <Button
                                     className={styles.loadMoreButton}
                                     disabled={loadMoreButtonDisabled}
+                                    // eslint-disable-next-line react/jsx-no-bind
                                     onClick={() => {
                                         const newOffset = offset + limit;
                                         setOffset(newOffset);

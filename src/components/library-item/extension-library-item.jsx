@@ -2,7 +2,6 @@ import {FormattedMessage} from 'react-intl';
 import PropTypes from 'prop-types';
 import React from 'react';
 
-import Box from '../box/box.jsx';
 import styles from './library-item.css';
 import extensionItemStyles from './extension-library-item.css';
 import classNames from 'classnames';
@@ -13,6 +12,15 @@ import internetConnectionIconURL from './internet-connection.svg';
 /* eslint-disable react/prefer-stateless-function */
 class ExtensionLibraryItem extends React.PureComponent {
     render () {
+        const hasMetadata = (
+            this.props.bluetoothRequired ||
+            this.props.internetConnectionRequired ||
+            this.props.collaborator ||
+            (this.props.credits && this.props.credits.length > 0) ||
+            this.props.docsURI ||
+            this.props.samples
+        );
+
         return (
             <div
                 className={classNames(
@@ -42,6 +50,7 @@ class ExtensionLibraryItem extends React.PureComponent {
                         src={this.props.iconURL}
                     />
                 </div>
+
                 {this.props.insetIconURL ? (
                     <div className={styles.libraryItemInsetImageContainer}>
                         <img
@@ -51,20 +60,14 @@ class ExtensionLibraryItem extends React.PureComponent {
                         />
                     </div>
                 ) : null}
+
                 <div className={styles.featuredText}>
                     <span>{this.props.name}</span>
                     <br />
                     <span className={styles.featuredDescription}>{this.props.description}</span>
                 </div>
 
-                {(
-                  this.props.bluetoothRequired ||
-                  this.props.internetConnectionRequired ||
-                  this.props.collaborator ||
-                  (this.props.credits && this.props.credits.length > 0) ||
-                  this.props.docsURI ||
-                  this.props.samples
-                ) ? (
+                {hasMetadata ? (
                     <div
                         className={classNames(
                             styles.libraryItemMetadata,
@@ -81,9 +84,7 @@ class ExtensionLibraryItem extends React.PureComponent {
                                             id="gui.extensionLibrary.requires"
                                         />
                                     </div>
-                                    <div
-                                        className={styles.libraryItemMetadataDetail}
-                                    >
+                                    <div className={styles.libraryItemMetadataDetail}>
                                         {this.props.bluetoothRequired ? (
                                             <img
                                                 src={bluetoothIconURL}
@@ -100,6 +101,7 @@ class ExtensionLibraryItem extends React.PureComponent {
                                 </div>
                             </div>
                         ) : null}
+
                         {this.props.collaborator ? (
                             <div className={styles.libraryItemMetadataSection}>
                                 <div>
@@ -110,14 +112,13 @@ class ExtensionLibraryItem extends React.PureComponent {
                                             id="gui.extensionLibrary.collaboration"
                                         />
                                     </div>
-                                    <div
-                                        className={styles.libraryItemMetadataDetail}
-                                    >
+                                    <div className={styles.libraryItemMetadataDetail}>
                                         {this.props.collaborator}
                                     </div>
                                 </div>
                             </div>
                         ) : null}
+
                         {this.props.credits && this.props.credits.length > 0 ? (
                             <div className={styles.libraryItemMetadataSection}>
                                 <div>
@@ -128,21 +129,18 @@ class ExtensionLibraryItem extends React.PureComponent {
                                             id="tw.createdBy"
                                         />
                                     </div>
-                                    <div
-                                        className={styles.libraryItemMetadataDetail}
-                                    >
+                                    <div className={styles.libraryItemMetadataDetail}>
                                         {this.props.credits.map((credit, index) => (
                                             <React.Fragment key={index}>
                                                 {credit}
-                                                {index !== this.props.credits.length - 1 && (
-                                                    ', '
-                                                )}
+                                                {index !== this.props.credits.length - 1 && ', '}
                                             </React.Fragment>
                                         ))}
                                     </div>
                                 </div>
                             </div>
                         ) : null}
+
                         {this.props.docsURI || this.props.samples ? (
                             <div className={styles.libraryItemMetadataSection}>
                                 <div>
@@ -153,9 +151,7 @@ class ExtensionLibraryItem extends React.PureComponent {
                                             id="dash.extensionLibrary.resources"
                                         />
                                     </div>
-                                    <div
-                                        className={styles.libraryItemMetadataDetail}
-                                    >
+                                    <div className={styles.libraryItemMetadataDetail}>
                                         {this.props.docsURI && (
                                             <a
                                                 href={this.props.docsURI}
@@ -170,11 +166,10 @@ class ExtensionLibraryItem extends React.PureComponent {
                                                 />
                                             </a>
                                         )}
+
                                         {this.props.samples && (
                                             <React.Fragment>
-                                                {this.props.docsURI && (
-                                                    <br />
-                                                )}
+                                                {this.props.docsURI && <br />}
                                                 {this.props.samples.map((sample, index) => (
                                                     <React.Fragment key={index}>
                                                         <a
@@ -210,7 +205,6 @@ class ExtensionLibraryItem extends React.PureComponent {
 }
 /* eslint-enable react/prefer-stateless-function */
 
-
 ExtensionLibraryItem.propTypes = {
     bluetoothRequired: PropTypes.bool,
     collaborator: PropTypes.string,
@@ -219,7 +213,6 @@ ExtensionLibraryItem.propTypes = {
         PropTypes.node
     ]),
     disabled: PropTypes.bool,
-    extensionId: PropTypes.string,
     favoriteButton: PropTypes.node,
     hidden: PropTypes.bool,
     iconURL: PropTypes.string,
@@ -238,7 +231,7 @@ ExtensionLibraryItem.propTypes = {
         href: PropTypes.string,
         text: PropTypes.string
     })),
-    onClick: PropTypes.func.isRequired,
+    onClick: PropTypes.func.isRequired
 };
 
 ExtensionLibraryItem.defaultProps = {

@@ -62,16 +62,16 @@ const blockColors = {
         quaternary: '#E64D00'
     },
     json: {
-        primary: "#748BEE",
-        secondary: "#687DD6",
-        tertiary: "#5C6FBE",
-        quaternary: "#5C6FBE"
+        primary: '#748BEE',
+        secondary: '#687DD6',
+        tertiary: '#5C6FBE',
+        quaternary: '#5C6FBE'
     },
     console: {
-        primary: "#6B8E5D",
-        secondary: "#57734C",
-        tertiary: "#56724A",
-        quaternary: "#56724A"
+        primary: '#6B8E5D',
+        secondary: '#57734C',
+        tertiary: '#56724A',
+        quaternary: '#56724A'
     },
     more: {
         primary: '#FF6680',
@@ -116,6 +116,7 @@ const blockColors = {
     numPadText: 'white', // Do not use hex here, it cannot be inlined with data-uri SVG
     valueReportBackground: '#FFFFFF',
     valueReportBorder: '#AAAAAA',
+    valueReportUncaughtBorder: '#FF0000',
     valueReportForeground: '#000000',
     menuHover: 'rgba(0, 0, 0, 0.2)',
     contextMenuBackground: '#ffffff',

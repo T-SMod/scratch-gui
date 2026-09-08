@@ -13,9 +13,9 @@ const LargeMonitor = ({categoryColor, value}) => (
                 color: categoryColor.text
             }}
         >
-            {Cast.isCustomType(value) && typeof value?.toMonitorContent === 'function'
-                ? (<DOMElementRenderer domElement={value.toMonitorContent()} />)
-                : String(value)}
+            {Cast.isCustomType(value) && typeof value?.toMonitorContent === 'function' ?
+                (<DOMElementRenderer domElement={value.toMonitorContent()} />) :
+                String(value)}
         </div>
     </div>
 );
@@ -25,10 +25,7 @@ LargeMonitor.propTypes = {
         background: PropTypes.string.isRequired,
         text: PropTypes.string.isRequired
     }).isRequired,
-    value: PropTypes.oneOfType([
-        PropTypes.string,
-        PropTypes.number
-    ])
+    value: PropTypes.any
 };
 
 export default LargeMonitor;

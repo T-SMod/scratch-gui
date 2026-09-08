@@ -26,7 +26,9 @@ const ActualAuthorInfo = ({
             imageUrl={imageUrl}
         />
         <div className={styles.titleAuthor}>
-            {!isDashProject ? <a
+            {isDashProject ? <h1 className={styles.projectTitle}>
+                {projectTitle}
+            </h1> : <a
                 className={styles.link}
                 href={`https://scratch.mit.edu/projects/${projectId.replace('s', '')}`}
                 target="_blank"
@@ -35,9 +37,7 @@ const ActualAuthorInfo = ({
                 <h1 className={styles.projectTitle}>
                     {projectTitle}
                 </h1>
-            </a> : <h1 className={styles.projectTitle}>
-                {projectTitle}
-            </h1>}
+            </a>}
             <div>
                 <span className={styles.usernameLine}>
                     <FormattedMessage
@@ -50,6 +50,7 @@ const ActualAuthorInfo = ({
                                     className={styles.link}
                                     href={isDashProject ? `${process.env.ROOT}user#${userId}` : `https://scratch.mit.edu/users/${username}`}
                                     target="_blank"
+                                    rel="noreferrer"
                                 >
                                     <span className={styles.username}>{username}</span>
                                 </a>
@@ -75,7 +76,10 @@ ActualAuthorInfo.propTypes = {
 const AuthorInfo = props => (
     props.projectId?.startsWith('s') ?
         <ActualAuthorInfo {...props} /> :
-        <ActualAuthorInfo {...props} isDashProject={true} />
+        <ActualAuthorInfo
+            {...props}
+            isDashProject
+        />
 );
 AuthorInfo.propTypes = {
     projectId: PropTypes.string

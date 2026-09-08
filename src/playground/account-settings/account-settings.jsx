@@ -4,7 +4,7 @@ import bindAll from 'lodash.bindall';
 import {connect} from 'react-redux';
 import {FormattedMessage, defineMessages, injectIntl, intlShape} from 'react-intl';
 import AppStateHOC from '../../lib/app-state-hoc.jsx';
-import getSession from '../../lib/session.js';
+import getSession, {requestDashApi} from '../../lib/dash-api.js';
 import render from '../app-target.js';
 
 import Input from '../../components/forms/input.jsx';
@@ -63,10 +63,11 @@ class AccountSettings extends React.Component {
     }
 
     async componentDidMount () {
-        document.title = this.props.intl.formatMessage(messages.title) + ' - ' + APP_NAME;
+        document.title = `${this.props.intl.formatMessage(messages.title)} - ${APP_NAME}`;
 
-        if (this.props.session && this.props.session?.username)
+        if (this.props.session && this.props.session?.username) {
             return;
+        }
 
         try {
             const session = await getSession();
@@ -88,11 +89,13 @@ class AccountSettings extends React.Component {
         this.setState({waiting: true, error: null});
         try {
             const session = await getSession();
-            if (!session || !session.username)
+            if (!session || !session.username) {
                 window.location.href = './login';
-            if (this.state.newPassword !== this.state.confirmPassword)
+            }
+            if (this.state.newPassword !== this.state.confirmPassword) {
                 throw new Error(this.props.intl.formatMessage(messages.passwordsDontMatch));
-            const response = await fetch('https://api.dashblocks.org/auth/change-password', {
+            }
+            const response = await requestDashApi('/auth/change-password', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -102,8 +105,10 @@ class AccountSettings extends React.Component {
                 credentials: 'include'
             });
             const data = await response.json();
-            if (!data.ok)
+            if (!data.ok) {
                 throw new Error(this.props.intl.formatMessage(messages.failedToChangePassword));
+            }
+            // eslint-disable-next-line no-alert
             alert(this.props.intl.formatMessage(messages.passwordChangedSuccessfully));
             window.location.href = './login';
         } catch (error) {

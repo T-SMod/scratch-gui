@@ -114,17 +114,17 @@ class LibraryComponent extends React.Component {
         const tagSet = new Set([lowerCaseTag]);
         if (this.state.playingItem === null) {
             this.setState(oldState => ({
-                selectedTags: oldState.selectedTags.has(lowerCaseTag)
-                    ? oldState.selectedTags.difference(tagSet)
-                    : oldState.selectedTags.union(tagSet)
+                selectedTags: oldState.selectedTags.has(lowerCaseTag) ?
+                    oldState.selectedTags.difference(tagSet) :
+                    oldState.selectedTags.union(tagSet)
             }));
         } else {
             this.props.onItemMouseLeave(this.getFilteredData()[this.state.playingItem]);
             this.setState(oldState => ({
                 playingItem: null,
-                selectedTags: oldState.selectedTags.has(lowerCaseTag)
-                    ? oldState.selectedTags.difference(tagSet)
-                    : oldState.selectedTags.union(tagSet)
+                selectedTags: oldState.selectedTags.has(lowerCaseTag) ?
+                    oldState.selectedTags.difference(tagSet) :
+                    oldState.selectedTags.union(tagSet)
             }));
         }
     }
@@ -278,7 +278,10 @@ class LibraryComponent extends React.Component {
                                         <div className={styles.tagWrapper}>
                                             {this.props.tags.map((tagProps, index) => (
                                                 tagProps === '---' ? (
-                                                    <div className={styles.divider} />
+                                                    <div
+                                                        key={index}
+                                                        className={styles.divider}
+                                                    />
                                                 ) : tagProps.isGroup ? (
                                                     <h4
                                                         className={tagProps.className}
@@ -326,10 +329,15 @@ class LibraryComponent extends React.Component {
                             dataItem === '---' ? (
                                 <Separator key={index} />
                             ) : dataItem === 'twGalleryMirror' ? (
-                                <div key={index} className={styles.twGalleryMirrorNote}>
+                                <div
+                                    key={index}
+                                    className={styles.twGalleryMirrorNote}
+                                >
                                     {this.props.intl.formatMessage({
                                         id: 'dash.extensionLibrary.twGalleryMirrorNote',
+                                        // eslint-disable-next-line max-len
                                         defaultMessage: 'Note: You are currently viewing a mirror of the TurboWarp Extension Gallery. Some extensions may be out of date or unavailable.',
+                                        // eslint-disable-next-line max-len
                                         description: 'Note indicating that the TurboWarp Extension Gallery is being served from a mirror site.'
                                     })}
                                 </div>
@@ -356,9 +364,9 @@ class LibraryComponent extends React.Component {
                                     isPlaying={this.state.playingItem === index}
                                     key={dataItem.key || (
                                         dataItem.extensionId ? dataItem.extensionId :
-                                        (typeof dataItem.name === 'string' ?
-                                            dataItem.name :
-                                            dataItem.rawURL)
+                                            (typeof dataItem.name === 'string' ?
+                                                dataItem.name :
+                                                dataItem.rawURL)
                                     )}
                                     name={dataItem.name}
                                     rate={dataItem.rate}

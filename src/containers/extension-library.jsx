@@ -3,8 +3,6 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import VM from 'scratch-vm';
 import {extensions, otherExtensions} from 'dash-extensions-gallery/src/lib/extensions.js';
-import {tsExtensione} from 'tsmod-extensions-gallery/src/lib/ext.js';
-import {gmExtensions} from 'neomod-extensions-gallery/src/lib/extensions.js';
 import {defineMessages, injectIntl, intlShape} from 'react-intl';
 import log from '../lib/log';
 
@@ -50,20 +48,16 @@ const translateGalleryItem = (extension, locale) => ({
 });
 
 const creditLinkShortcuts = {
-    '_scratch_': (credit) => `https://scratch.mit.edu/users/${credit.name}`,
-    '_github_': (credit) => `https://github.com/${credit.name}`,
-    '_dash_': (credit) => `https://dashblocks.org/user#${credit.name}`,
-    '_tsmod_': (credit) => `https://t-smod.github.io/user#${credit.name}`,
-    '_pm_': (credit) => `https://penguinmod.com/user?id=${credit.name}`
+    _scratch_: credit => `https://scratch.mit.edu/users/${credit.name}`,
+    _github_: credit => `https://github.com/${credit.name}`,
+    _dash_: credit => `https://dashblocks.org/user#${credit.name}`
 };
-const creditLink = (credit) => credit.link;
+const creditLink = credit => credit.link;
 
 let cachedTwGallery = null;
 let twGalleryMirror = false;
 let cachedOtherExtensions = null;
 let cachedGallery = null;
-let cachedTsGallery = null;
-let cachedGmGallery = null;
 
 const fetchTwLibrary = async () => {
     let res;
@@ -119,149 +113,71 @@ const fetchTwLibrary = async () => {
     }));
 };
 
-const fetchOtherExtensions = async () => {
-    return otherExtensions.map(extension => ({
-        name: extension.name,
-        nameTranslations: extension.nameTranslations || {},
-        description: extension.description,
-        descriptionTranslations: extension.descriptionTranslations || {},
-        extensionId: extension.id,
-        extensionURL: extension.code.startsWith('http') ? extension.code : `https://extensions.penguinmod.com/extensions/${extension.code}`,
-        iconURL: extension.banner.startsWith('http') ? extension.banner : `https://extensions.penguinmod.com/images/${extension.banner || 'unknown.svg'}`,
-        tags: ['other'],
-        credits: [
-            ...(typeof extension.creator == 'object' ? extension.creator : [extension.creator] || []),
-            ...(extension.notes ? [extension.notes] : [])
-        ].map(credit => {
-            if (extension.notes && credit == extension.notes) return credit;
+const getOtherExtensions = () => otherExtensions.map(extension => ({
+    name: extension.name,
+    nameTranslations: extension.nameTranslations || {},
+    description: extension.description,
+    descriptionTranslations: extension.descriptionTranslations || {},
+    extensionId: extension.id,
+    extensionURL: extension.code.startsWith('http') ? extension.code : `https://extensions.penguinmod.com/extensions/${extension.code}`,
+    iconURL: extension.banner.startsWith('http') ? extension.banner : `https://extensions.penguinmod.com/images/${extension.banner || 'unknown.svg'}`,
+    tags: ['other'],
+    credits: [
+        ...(typeof extension.creator === 'object' ? extension.creator : [extension.creator] || []),
+        ...(extension.notes ? [extension.notes] : [])
+    ].map(credit => {
+        if (extension.notes && credit === extension.notes) return credit;
+        return (
+            <a
+                href={extension.isGitHub ? `https://github.com/${credit}` : `https://scratch.mit.edu/users/${credit}`}
+                target="_blank"
+                rel="noreferrer"
+                key={credit}
+            >
+                {credit}
+            </a>
+        );
+    }),
+    docsURI: extension.documentation ? `https://extensions.penguinmod.com/docs/${extension.documentation}` : null,
+    samples: null,
+    incompatibleWithScratch: !(extension.scratchCompatible || false),
+    featured: true
+}));
+
+const getLibrary = () => extensions.map(extension => ({
+    name: extension.name,
+    nameTranslations: extension.nameTranslations || {},
+    description: extension.description,
+    descriptionTranslations: extension.descriptionTranslations || {},
+    extensionId: extension.id,
+    extensionURL: extension.code?.startsWith('http') ? extension.code : `https://dashblocks.org/extensions/static/extensions/${extension.code}`,
+    iconURL: extension.banner?.startsWith('http') ? extension.banner : `https://dashblocks.org/extensions/static/images/${extension.banner || 'unknown.svg'}`,
+    tags: ['dash'],
+    credits: [
+        ...(Array.isArray(extension.creator) ? extension.creator : [extension.creator] || []).map(credit => {
+            if (typeof credit === 'string') return credit;
             return (
                 <a
-                    href={extension.isGitHub ? `https://github.com/${credit}` : `https://scratch.mit.edu/users/${credit}`}
+                    href={(creditLinkShortcuts[credit.link] || creditLink)(credit)}
                     target="_blank"
                     rel="noreferrer"
-                    key={credit}
+                    key={credit.name}
                 >
-                    {credit}
+                    {credit.name}
                 </a>
             );
         }),
-        docsURI: extension.documentation ? `https://extensions.penguinmod.com/docs/${extension.documentation}` : null,
-        samples: null,
-        incompatibleWithScratch: !(extension.scratchCompatible || false),
-        featured: true
-    }));
-};
-
-const fetchLibrary = async () => {
-    return extensions.map(extension => ({
-        name: extension.name,
-        nameTranslations: extension.nameTranslations || {},
-        description: extension.description,
-        descriptionTranslations: extension.descriptionTranslations || {},
-        extensionId: extension.id,
-        extensionURL: extension.code?.startsWith('http') ? extension.code : `https://dashblocks.org/extensions/static/extensions/${extension.code}`,
-        iconURL: extension.banner?.startsWith('http') ? extension.banner : `https://dashblocks.org/extensions/static/images/${extension.banner || 'unknown.svg'}`,
-        tags: ['dash'],
-        credits: [
-            ...(Array.isArray(extension.creator) ? extension.creator : [extension.creator] || []).map(credit => {
-                if (typeof credit === 'string') return credit;
-                return (
-                    <a
-                        href={(creditLinkShortcuts[credit.link] || creditLink)(credit)}
-                        target="_blank"
-                        rel="noreferrer"
-                        key={credit.name}
-                    >
-                        {credit.name}
-                    </a>
-                );
-            }),
-            ...(extension.notes ? [extension.notes] : [])
-        ],
-        docsURI: extension.documentation ? `https://dashblocks.org/extensions/static/documentations/${extension.documentation}.md` : null,
-        samples: /*extension.samples ? extension.samples.map(sample => ({
+        ...(extension.notes ? [extension.notes] : [])
+    ],
+    docsURI: extension.documentation ? `https://dashblocks.org/extensions/static/documentations/${extension.documentation}.md` : null,
+    samples: /* extension.samples ? extension.samples.map(sample => ({
             href: `${process.env.ROOT}editor?project_url=https://extensions.turbowarp.org/samples/${encodeURIComponent(sample)}.sb3`,
             text: sample
         })) :*/ null,
-        incompatibleWithScratch: !(extension.scratchCompatible || false),
-        internetConnectionRequired: extension.internetConnectionRequired || false,
-        featured: true
-    }));
-};
-
-const fetchTsLibrary = async () => {
-    return tsExtensions.map(extension => ({
-        name: extension.name,
-        nameTranslations: extension.nameTranslations || {},
-        description: extension.description,
-        descriptionTranslations: extension.descriptionTranslations || {},
-        extensionId: extension.id,
-        extensionURL: extension.code?.startsWith('http') ? extension.code : `https://t-smod.github.io/extensions/static/extensions/${extension.code}`,
-        iconURL: extension.banner?.startsWith('http') ? extension.banner : `https://t-smod.github.io/extensions/static/images/${extension.banner || 'unknown.svg'}`,
-        tags: ['tsmod'],
-        credits: [
-            ...(Array.isArray(extension.creator) ? extension.creator : [extension.creator] || []).map(credit => {
-                if (typeof credit === 'string') return credit;
-                return (
-                    <a
-                        href={(creditLinkShortcuts[credit.link] || creditLink)(credit)}
-                        target="_blank"
-                        rel="noreferrer"
-                        key={credit.name}
-                    >
-                        {credit.name}
-                    </a>
-                );
-            }),
-            ...(extension.notes ? [extension.notes] : [])
-        ],
-        docsURI: extension.documentation ? `https://t-smod.github.io/extensions/static/documentations/${extension.documentation}.md` : null,
-        samples: /*extension.samples ? extension.samples.map(sample => ({
-            href: `${process.env.ROOT}editor?project_url=https://extensions.turbowarp.org/samples/${encodeURIComponent(sample)}.sb3`,
-            text: sample
-        })) :*/ null,
-        incompatibleWithScratch: !(extension.scratchCompatible || false),
-        internetConnectionRequired: extension.internetConnectionRequired || false,
-        featured: true
-    }));
-};
-
-const fetchGmLibrary = async () => {
-    return gmExtensions.map(extension => ({
-        name: extension.name,
-        nameTranslations: extension.nameTranslations || {},
-        description: extension.description,
-        descriptionTranslations: extension.descriptionTranslations || {},
-        extensionId: extension.id,
-        extensionURL: extension.code?.startsWith('http') ? extension.code : `https://neo-mod.github.io/extensions/static/extensions/${extension.code}`,
-        iconURL: extension.banner?.startsWith('http') ? extension.banner : `https://neo-mod.github.io/extensions/static/images/${extension.banner || 'unknown.svg'}`,
-        tags: ['neomod'],
-        credits: [
-            ...(Array.isArray(extension.creator) ? extension.creator : [extension.creator] || []).map(credit => {
-                if (typeof credit === 'string') return credit;
-                return (
-                    <a
-                        href={(creditLinkShortcuts[credit.link] || creditLink)(credit)}
-                        target="_blank"
-                        rel="noreferrer"
-                        key={credit.name}
-                    >
-                        {credit.name}
-                    </a>
-                );
-            }),
-            ...(extension.notes ? [extension.notes] : [])
-        ],
-        docsURI: extension.documentation ? `https://neo-mod.github.io/extensions/static/documentations/${extension.documentation}.md` : null,
-        samples: /*extension.samples ? extension.samples.map(sample => ({
-            href: `${process.env.ROOT}editor?project_url=https://extensions.turbowarp.org/samples/${encodeURIComponent(sample)}.sb3`,
-            text: sample
-        })) :*/ null,
-        incompatibleWithScratch: !(extension.scratchCompatible || false),
-        internetConnectionRequired: extension.internetConnectionRequired || false,
-        featured: true
-    }));
-};
+    incompatibleWithScratch: !(extension.scratchCompatible || false),
+    internetConnectionRequired: extension.internetConnectionRequired || false,
+    featured: true
+}));
 
 class ExtensionLibrary extends React.PureComponent {
     constructor (props) {
@@ -273,8 +189,6 @@ class ExtensionLibrary extends React.PureComponent {
             otherExtensions: cachedOtherExtensions,
             twGallery: cachedTwGallery,
             gallery: cachedGallery,
-            tsGallery: cachedTsGallery,
-            gmGallery: cachedGmGallery,
             galleryError: null,
             galleryTimedOut: false
         };
@@ -303,70 +217,15 @@ class ExtensionLibrary extends React.PureComponent {
                     clearTimeout(timeout);
                 });
 
-            
-            fetchOtherExtensions()
-                .then(gallery => {
-                    cachedOtherExtensions = gallery;
-                    this.setState({
-                        otherExtensions: gallery
-                    });
-                    clearTimeout(timeout);
-                })
-                .catch(error => {
-                    log.error(error);
-                    this.setState({
-                        galleryError: error
-                    });
-                    clearTimeout(timeout);
-                });
-
-            fetchLibrary()
-                .then(gallery => {
-                    cachedGallery = gallery;
-                    this.setState({
-                        gallery
-                    });
-                    clearTimeout(timeout);
-                })
-                .catch(error => {
-                    log.error(error);
-                    this.setState({
-                        galleryError: error
-                    });
-                    clearTimeout(timeout);
-                });
-
-            fetchTsLibrary()
-                .then(gallery => {
-                    cachedTsGallery = gallery;
-                    this.setState({
-                        tsGallery: gallery
-                    });
-                    clearTimeout(timeout);
-                })
-                .catch(error => {
-                    log.error(error);
-                    this.setState({
-                        galleryError: error
-                    });
-                    clearTimeout(timeout);
-                });
-
-            fetchGwLibrary()
-                .then(gallery => {
-                    cachedGmGallery = gallery;
-                    this.setState({
-                        gmGallery: gallery
-                    });
-                    clearTimeout(timeout);
-                })
-                .catch(error => {
-                    log.error(error);
-                    this.setState({
-                        galleryError: error
-                    });
-                    clearTimeout(timeout);
-                });
+            const formattedOtherExtensions = getOtherExtensions();
+            const gallery = getLibrary();
+            cachedOtherExtensions = gallery;
+            cachedGallery = gallery;
+            // eslint-disable-next-line react/no-did-mount-set-state
+            this.setState({
+                otherExtensions: formattedOtherExtensions,
+                gallery
+            });
         }
     }
     handleItemSelect (item) {
@@ -405,6 +264,7 @@ class ExtensionLibrary extends React.PureComponent {
                     url.startsWith('https://extensions.turbowarp.org/') &&
                     twGalleryMirror
                 ) {
+                    // eslint-disable-next-line no-alert
                     if (!confirm(this.props.intl.formatMessage(messages.twGalleryMirrorConfirm))) return;
                     this.props.vm.extensionManager.loadExtensionURL(
                         url.replace(
@@ -441,44 +301,10 @@ class ExtensionLibrary extends React.PureComponent {
         library = extensionLibraryContent.map(toLibraryItem);
 
         library.push('---');
-
-        if (this.state.tsGallery) {
-            library.push(toLibraryItem(galleryMore));
-            const filteredGallery = this.state.tsGallery
-                .filter(item => !addedIds.has(item.extensionId))
-                .map(i => {
-                    addedIds.add(i.extensionId);
-                    return translateGalleryItem(i, locale);
-                });
-            library.push(...filteredGallery.map(toLibraryItem));
-        } else if (this.state.galleryTimedOut && !this.state.tsGallery) {
-            library.push(toLibraryItem(galleryLoading));
-        } else if (this.state.galleryError && !this.state.tsGallery) {
-            library.push(toLibraryItem(galleryError));
-        }
-
-        library.push('---');
-
-        if (this.state.gmGallery) {
-            library.push(toLibraryItem(galleryGm));
-            const filteredGallery = this.state.gmGallery
-                .filter(item => !addedIds.has(item.extensionId))
-                .map(i => {
-                    addedIds.add(i.extensionId);
-                    return translateGalleryItem(i, locale);
-                });
-            library.push(...filteredGallery.map(toLibraryItem));
-        } else if (this.state.galleryTimedOut && !this.state.gmGallery) {
-            library.push(toLibraryItem(galleryLoading));
-        } else if (this.state.galleryError && !this.state.gmGallery) {
-            library.push(toLibraryItem(galleryError));
-        }
-
-        library.push('---');
         
         const addedIds = new Set();
         if (this.state.gallery) {
-            library.push(toLibraryItem(galleryDash));
+            library.push(toLibraryItem(galleryMore));
             const filteredGallery = this.state.gallery
                 .filter(item => !addedIds.has(item.extensionId))
                 .map(i => {
@@ -513,8 +339,6 @@ class ExtensionLibrary extends React.PureComponent {
         library.push('---');
 
         if (this.state.otherExtensions) {
-            library.push(toLibraryItem(galleryPm));
-            library.push(toLibraryItem(gallery));
             const filteredOther = this.state.otherExtensions
                 .filter(item => !addedIds.has(item.extensionId))
                 .map(i => {

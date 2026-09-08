@@ -9,7 +9,7 @@ import localesReducer, {initLocale, localesInitialState} from '../reducers/local
 
 import {setPlayer, setFullScreen} from '../reducers/mode.js';
 import {setSession} from '../reducers/dash.js';
-import getSession from './session';
+import getSession from './dash-api.js';
 
 import locales from '@turbowarp/scratch-l10n';
 import {detectLocale} from './detect-locale';
@@ -98,6 +98,11 @@ const AppStateHOC = function (WrappedComponent, localesOnly) {
             window.ReduxStore = this.store;
             AddonHooks.appStateStore = this.store;
         }
+        async componentDidMount () {
+            if (this.props.isEmbedded) return;
+            const session = await getSession();
+            this.store.dispatch(setSession(session));
+        }
         componentDidUpdate (prevProps) {
             if (localesOnly) return;
             if (prevProps.isPlayerOnly !== this.props.isPlayerOnly) {
@@ -106,11 +111,6 @@ const AppStateHOC = function (WrappedComponent, localesOnly) {
             if (prevProps.isFullScreen !== this.props.isFullScreen) {
                 this.store.dispatch(setFullScreen(this.props.isFullScreen));
             }
-        }
-        async componentDidMount () {
-            if (this.props.isEmbedded) return;
-            const session = await getSession();
-            this.store.dispatch(setSession(session));
         }
         render () {
             const {

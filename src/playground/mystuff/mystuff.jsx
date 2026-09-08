@@ -13,7 +13,7 @@ import LazyMenuBar from '../../components/menu-bar/lazy-menu-bar.jsx';
 import {APP_NAME} from '../../lib/brand';
 import {applyGuiColors} from '../../lib/themes/guiHelpers';
 import {detectTheme} from '../../lib/themes/themePersistance';
-import getSession from '../../lib/session.js';
+import getSession, {requestDashApi} from '../../lib/dash-api.js';
 
 /* eslint-disable react/jsx-no-literals */
 
@@ -43,7 +43,7 @@ const messages = defineMessages({
     }
 });
 
-const MyStuff = (props) => {
+const MyStuff = props => {
     const [userData, setUserData] = useState(null);
     const [projects, setProjects] = useState([]);
     const [limit] = useState(40);
@@ -54,8 +54,29 @@ const MyStuff = (props) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const fetchProjects = async (userId, currentOffset) => {
+        setLoadMoreButtonDisabled(true);
+        try {
+            const projectsRes = await requestDashApi(
+                `/users/${userId}/projects?limit=${limit}&offset=${currentOffset}`,
+                {credentials: 'include'}
+            );
+            const projectsData = await projectsRes.json();
+            if (!projectsData.ok) throw new Error(projectsData.error);
+            setProjects(prevProjects => (currentOffset === 0 ?
+                (projectsData.projects || []) :
+                [...prevProjects, ...(projectsData.projects || [])]));
+            setHasMore((projectsData.projects || []).length === limit);
+            setOffset(currentOffset);
+        } catch (catchedError) {
+            setError(catchedError.message);
+        } finally {
+            setLoadMoreButtonDisabled(false);
+        }
+    };
+
     useEffect(() => {
-        document.title = props.intl.formatMessage(messages.title) + ' - ' + APP_NAME;
+        document.title = `${props.intl.formatMessage(messages.title)} - ${APP_NAME}`;
 
         const fetchFullProfile = async () => {
             setLoading(true);
@@ -66,14 +87,14 @@ const MyStuff = (props) => {
                 return;
             }
             try {
-                const userRes = await fetch(`https://api.dashblocks.org/users/${session.id}`);
+                const userRes = await requestDashApi(`/users/${session.id}`);
                 const userDataResult = await userRes.json();
                 if (!userDataResult.ok) throw new Error(userDataResult.error);
 
                 setUserData(userDataResult.user);
                 await fetchProjects(session.id, 0);
-            } catch (error) {
-                setError(error.message);
+            } catch (catchedError) {
+                setError(catchedError.message);
             } finally {
                 setLoading(false);
             }
@@ -82,70 +103,71 @@ const MyStuff = (props) => {
         fetchFullProfile();
     }, []);
 
-    const fetchProjects = async (userId, currentOffset) => {
-        setLoadMoreButtonDisabled(true);
-        try {
-            const projectsRes = await fetch(`https://api.dashblocks.org/users/${userId}/projects?limit=${limit}&offset=${currentOffset}`, {
-                credentials: 'include'
-            });
-            const projectsData = await projectsRes.json();
-            if (!projectsData.ok) throw new Error(projectsData.error);
-            setProjects(prevProjects => currentOffset === 0
-                ? (projectsData.projects || [])
-                : [...prevProjects, ...(projectsData.projects || [])]);
-            setHasMore((projectsData.projects || []).length === limit);
-            setOffset(currentOffset);
-        } catch (error) {
-            setError(error.message);
-        } finally {
-            setLoadMoreButtonDisabled(false);
-        }
-    };
-
-    async function handleDeleteProject(projectId) {
+    const handleDeleteProject = async projectId => {
         const project = projects.find(p => p.id === projectId);
-        if (!project || !window.confirm(props.intl.formatMessage(messages.confirmDeleteProject, {projectName: project.name})))
+        if (
+            !project ||
+                // eslint-disable-next-line no-alert
+                !window.confirm(
+                    props.intl.formatMessage(messages.confirmDeleteProject, {
+                        projectName: project.name
+                    })
+                )
+        ) {
             return;
+        }
 
         try {
-            const res = await fetch(`https://api.dashblocks.org/projects/${projectId}`, {
+            const res = await requestDashApi(`/projects/${projectId}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
             const data = await res.json();
             if (!data.ok) throw new Error(data.error);
-            if (res.status_code === 202)
+            if (res.status_code === 202) {
+                // eslint-disable-next-line no-alert
                 alert(props.intl.formatMessage(messages.deletedOnlyFromProfile));
+            }
 
             setProjects(prevProjects => prevProjects.filter(p => p.id !== projectId));
-        } catch (error) {
-            alert(`Error deleting ${project.name} project: ${error.message}`);
+        } catch (catchedError) {
+            // eslint-disable-next-line no-alert
+            alert(`Error deleting ${project.name} project: ${catchedError.message}`);
         }
-    }
+    };
 
-    if (loading) return (
-        <>
-            <LazyMenuBar />
-            <div className={styles.spinner}>
-                <Spinner level={'primary'} large />
-            </div>
-            <Footer />
-        </>
-    );
-    if (error) return (
-        <>
-            <LazyMenuBar />
-            <div>Error: {error}</div>
-            <Footer />
-        </>
-    );
-    if (!userData) return (
-        <>
-            <LazyMenuBar />
-            <div>Failed to load user data</div>
-            <Footer />
-        </>
-    );
+    if (loading) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div className={styles.spinner}>
+                    <Spinner
+                        level={'primary'}
+                        large
+                    />
+                </div>
+                <Footer />
+            </>
+        );
+    }
+    if (error) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div>Error: {error}</div>
+                <Footer />
+            </>
+        );
+    }
+    if (!userData) {
+        return (
+            <>
+                <LazyMenuBar />
+                <div>Failed to load user data</div>
+                <Footer />
+            </>
+        );
+    }
 
     return (
         <>
@@ -164,7 +186,7 @@ const MyStuff = (props) => {
                             />
                         </h2>
                         <div className={styles.projectGrid}>
-                            {projects.map((project) => (
+                            {projects.map(project => (
                                 <div
                                     key={project.id}
                                     className={styles.projectCard}
@@ -178,6 +200,7 @@ const MyStuff = (props) => {
                                     </div>
                                     <div className={styles.projectInfo}>
                                         <h4
+                                            // eslint-disable-next-line react/jsx-no-bind
                                             onClick={() => window.open(`./#${project.id}`, '_blank')}
                                             title={props.intl.formatMessage(messages.hoverText, {
                                                 author: userData.username,
@@ -186,6 +209,7 @@ const MyStuff = (props) => {
                                         >{project.name}</h4>
                                         <Button
                                             className={styles.seeInsideButton}
+                                            // eslint-disable-next-line react/jsx-no-bind
                                             onClick={() => window.open(`./editor#${project.id}`, '_blank')}
                                         >
                                             <FormattedMessage
@@ -208,6 +232,7 @@ const MyStuff = (props) => {
                                         </p>
                                         <Button
                                             className={styles.deleteProjectButton}
+                                            // eslint-disable-next-line react/jsx-no-bind
                                             onClick={() => handleDeleteProject(project.id)}
                                         >
                                             <FormattedMessage
@@ -223,6 +248,7 @@ const MyStuff = (props) => {
                                 <Button
                                     className={styles.loadMoreButton}
                                     disabled={loadMoreButtonDisabled}
+                                    // eslint-disable-next-line react/jsx-no-bind
                                     onClick={() => {
                                         const newOffset = offset + limit;
                                         setOffset(newOffset);

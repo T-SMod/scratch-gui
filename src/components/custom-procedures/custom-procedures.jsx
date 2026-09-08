@@ -43,41 +43,41 @@ const messages = defineMessages({
     }
 });
 
-const CustomProcedures = (props) => {
+const CustomProcedures = props => {
     const [inputIcon, setInputIcon] = useState(textInputIcon);
     useEffect(() => {
         switch (props.menuInput) {
-            case "s":
-                setInputIcon(textInputIcon);
-                break;
-            case "b":
-                setInputIcon(booleanInputIcon);
-                break;
-            case "a":
-                setInputIcon(arrayInputIcon);
-                break;
-            case "o":
-                setInputIcon(arrayInputIcon);
-                break;
-        };
+        case 's':
+            setInputIcon(textInputIcon);
+            break;
+        case 'b':
+            setInputIcon(booleanInputIcon);
+            break;
+        case 'a':
+            setInputIcon(arrayInputIcon);
+            break;
+        case 'o':
+            setInputIcon(arrayInputIcon);
+            break;
+        }
     }, [props.menuInput]);
     
     const ScratchBlocks = LazyScratchBlocks.get();
     const themeObj = props.theme.getCustomExtensionColors();
     const categories = [
-        "motion",
-        "looks",
-        "sounds",
-        "event",
-        "control",
-        "sensing",
-        "operators",
-        "data",
-        "data_lists",
-        "json",
-        "console",
-        "more",
-        "pen",
+        'motion',
+        'looks',
+        'sounds',
+        'event',
+        'control',
+        'sensing',
+        'operators',
+        'data',
+        'data_lists',
+        'json',
+        'console',
+        'more',
+        'pen'
     ];
     return (
         <Modal
@@ -154,11 +154,12 @@ const CustomProcedures = (props) => {
                         <div
                             key={index}
                             style={{
-                                backgroundColor: ScratchBlocks.Colours[category].primary,
+                                backgroundColor: ScratchBlocks.Colours[category].primary
                             }}
                             className={styles.colorOption}
                             role="button"
                             draggable={false}
+                            // eslint-disable-next-line react/jsx-no-bind
                             onClick={() => props.setColor(blockColors[category].primary)}
                         />
                     ))}
@@ -168,26 +169,28 @@ const CustomProcedures = (props) => {
                             <div
                                 key={index}
                                 style={{
-                                    backgroundColor: Object.keys(themeObj).length === 0
-                                        ? extInfo.color1
-                                        : themeObj.primary(extInfo.color1),
+                                    backgroundColor: Object.keys(themeObj).length === 0 ?
+                                        extInfo.color1 :
+                                        themeObj.primary(extInfo.color1)
                                 }}
                                 className={styles.colorOption}
                                 role="button"
                                 draggable={false}
+                                // eslint-disable-next-line react/jsx-no-bind
                                 onClick={() => props.setColor(extInfo.color1)}
                             />
                         ))}
                     <input
                         style={{
-                            backgroundColor: Object.keys(themeObj).length === 0
-                                ? props.color ?? ScratchBlocks.Colours.more.primary
-                                : themeObj.primary(props.color ?? blockColors.more.primary),
+                            backgroundColor: Object.keys(themeObj).length === 0 ?
+                                props.color ?? ScratchBlocks.Colours.more.primary :
+                                themeObj.primary(props.color ?? blockColors.more.primary)
                         }}
                         type="color"
                         value={props.color ?? blockColors.more.primary}
                         className={classNames(styles.colorOption, styles.colorPicker)}
-                        onChange={(e) => props.setColor(e.target.value)}
+                        // eslint-disable-next-line react/jsx-no-bind
+                        onChange={e => props.setColor(e.target.value)}
                     />
                 </div>
                 <div className={styles.checkboxRow}>
@@ -215,7 +218,10 @@ const CustomProcedures = (props) => {
                             id="gui.customProcedures.cancel"
                         />
                     </button>
-                    <button className={styles.okButton} onClick={props.onOk}>
+                    <button
+                        className={styles.okButton}
+                        onClick={props.onOk}
+                    >
                         <FormattedMessage
                             defaultMessage="OK"
                             description="Label for button to save new custom procedure"
@@ -229,6 +235,7 @@ const CustomProcedures = (props) => {
 };
             
 CustomProcedures.propTypes = {
+    vm: PropTypes.object.isRequired,
     componentRef: PropTypes.func.isRequired,
     intl: intlShape,
     onAddInput: PropTypes.func.isRequired,
@@ -238,7 +245,11 @@ CustomProcedures.propTypes = {
     onCancel: PropTypes.func.isRequired,
     onOk: PropTypes.func.isRequired,
     onToggleWarp: PropTypes.func.isRequired,
-    warp: PropTypes.bool.isRequired
+    warp: PropTypes.bool.isRequired,
+    menuInput: PropTypes.string.isRequired,
+    theme: PropTypes.object.isRequired,
+    setColor: PropTypes.func.isRequired,
+    color: PropTypes.string
 };
 
 const mapStateToProps = state => ({

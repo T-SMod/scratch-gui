@@ -17,9 +17,9 @@ const DefaultMonitor = ({categoryColor, label, value}) => (
                     color: categoryColor.text
                 }}
             >
-                {Cast.isCustomType(value) && typeof value?.toMonitorContent === 'function'
-                    ? (<DOMElementRenderer domElement={value.toMonitorContent()} />)
-                    : String(value)}
+                {Cast.isCustomType(value) && typeof value?.toMonitorContent === 'function' ?
+                    (<DOMElementRenderer domElement={value.toMonitorContent()} />) :
+                    String(value)}
             </div>
         </div>
     </div>
@@ -31,10 +31,7 @@ DefaultMonitor.propTypes = {
         text: PropTypes.string.isRequired
     }).isRequired,
     label: PropTypes.string.isRequired,
-    value: PropTypes.oneOfType([
-        PropTypes.string,
-        PropTypes.number
-    ])
+    value: PropTypes.any
 };
 
 export default DefaultMonitor;

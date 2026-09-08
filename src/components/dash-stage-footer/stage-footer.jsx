@@ -1,19 +1,19 @@
 import classNames from 'classnames';
 import {FormattedDate, FormattedTime, defineMessages, injectIntl, intlShape} from 'react-intl';
 import PropTypes from 'prop-types';
-import React from 'react';
-import {useState, useEffect} from 'react';
+import React, {useState, useEffect} from 'react';
 import {connect} from 'react-redux';
 
 import Box from '../box/box.jsx';
 import Button from '../button/button.jsx';
 
-import getSession from '../../lib/session';
+import getSession, {requestDashApi} from '../../lib/dash-api.js';
 import {setSession} from '../../reducers/dash';
 
 import fireReactionOnIcon from './fire-reaction-on.svg';
 import fireReactionOffIcon from './fire-reaction-off.svg';
 import viewsIcon from './views.svg';
+import forkIcon from './forks.svg';
 
 import styles from './stage-footer.css';
 
@@ -32,24 +32,30 @@ const messages = defineMessages({
         defaultMessage: 'Views Count',
         description: 'Count of project\'s views',
         id: 'dash.project.viewsCount'
+    },
+    forks: {
+        defaultMessage: 'Forks',
+        description: 'Button to open project\'s forks page',
+        id: 'dash.project.forks'
     }
 });
 
-const StageFooter = (props) => {  
+const StageFooter = props => {
     const [projectMetadata, setProjectMetadata] = useState(null);
     const [isFired, setIsFired] = useState(false);
     const [isDashProject, setIsDashProject] = useState(false);
 
+    /* eslint-disable require-jsdoc, func-style */
     useEffect(() => {
-        async function fetchProjectMetadata() {
+        const fetchProjectMetadata = async function () {
             setIsDashProject(false);
-            const res = await fetch(`https://api.dashblocks.org/projects/${props.projectId}`);
+            const res = await requestDashApi(`/projects/${props.projectId}`);
             const data = await res.json();
             if (data.ok) {
                 setIsDashProject(true);
-                const viewRes = await fetch(`https://api.dashblocks.org/projects/${props.projectId}/view`, {
-                    method: "POST",
-                    credentials: "include"
+                const viewRes = await requestDashApi(`/projects/${props.projectId}/view`, {
+                    method: 'POST',
+                    credentials: 'include'
                 });
                 const viewData = await viewRes.json();
                 setProjectMetadata({
@@ -60,30 +66,30 @@ const StageFooter = (props) => {
                     }
                 });
             }
-        }
+        };
         fetchProjectMetadata();
     }, [props.projectId]);
 
     useEffect(() => {
-        function fetchFireStatus() {
+        const fetchFireStatus = function () {
             if (!props.session?.firedProjects) return;
             setIsFired(props.session.firedProjects.includes(+props.projectId));
-        }
+        };
         fetchFireStatus();
     }, [props.session?.firedProjects || []]);
 
-    async function updateSession() {
+    const updateSession = async function () {
         const updatedSession = await getSession();
         setSession(updatedSession);
-    }
+    };
 
-    async function handleFireButtonClick() {
+    const handleFireButtonClick = async function () {
         if (!props.session || !props.session?.id) {
             window.open('./login', '_blank');
             return;
         }
         if (isFired) {
-            const res = await fetch(`https://api.dashblocks.org/projects/${props.projectId}/fire`, {
+            const res = await requestDashApi(`/projects/${props.projectId}/fire`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
@@ -99,7 +105,7 @@ const StageFooter = (props) => {
                 }));
             }
         } else {
-            const res = await fetch(`https://api.dashblocks.org/projects/${props.projectId}/fire`, {
+            const res = await requestDashApi(`/projects/${props.projectId}/fire`, {
                 method: 'POST',
                 credentials: 'include'
             });
@@ -116,7 +122,8 @@ const StageFooter = (props) => {
             }
         }
         await updateSession();
-    }
+    };
+    /* eslint-enable require-jsdoc, func-style */
 
     if (!isDashProject || !props.projectId) return null;
 
@@ -128,6 +135,7 @@ const StageFooter = (props) => {
                 [styles.fireReactionOffIcon]: !isFired
             })}
             iconSrc={isFired ? fireReactionOnIcon : fireReactionOffIcon}
+            // eslint-disable-next-line react/jsx-no-bind
             onClick={handleFireButtonClick}
             title={isFired ? props.intl.formatMessage(messages.unfire) : props.intl.formatMessage(messages.fire)}
         >
@@ -149,6 +157,20 @@ const StageFooter = (props) => {
         </div>
     );
 
+    const forksButton = (
+        <Button
+            className={styles.forksButton}
+            iconAlt={props.intl.formatMessage(messages.forks)}
+            iconClassName={styles.forkIcon}
+            iconSrc={forkIcon}
+            // eslint-disable-next-line react/jsx-no-bind
+            onClick={() => window.open(`project-forks#${props.projectId}`)}
+            title={props.intl.formatMessage(messages.forks)}
+        >
+            {projectMetadata?.stats?.forks || 0}
+        </Button>
+    );
+
     const uploadDate = projectMetadata?.uploadedAt ? new Date(projectMetadata?.uploadedAt) : null;
     const uploadDateNode = uploadDate ? (
         <>
@@ -163,6 +185,7 @@ const StageFooter = (props) => {
             <div className={styles.footerButtonsRow}>
                 {fireButton}
                 {viewsCount}
+                {forksButton}
             </div>
             <div className={styles.footerButtonsRow}>
                 {uploadDateNode}
